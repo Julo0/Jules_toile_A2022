@@ -1192,7 +1192,6 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
             lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_repos(Pos_repos, Masse_centre)
 
         # w=[k,Pt] :
-
         lbw += lbw_Pt
         ubw += ubw_Pt
         w0 += w0_Pt
@@ -1202,12 +1201,18 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     J = a_minimiser(X, K, F_totale_collecte, Pt_collecte, Pt_ancrage,dict_fixed_params,labels,min_energie, ind_masse)
     obj = J(X,K)
 
-#fonction contrainte :
+    #fonction contrainte :
     g += [K[12] +  K[13] + K[14] + K[15] + K[16] - Masse_centre]
     lbg += [0]
     ubg += [0]
+###---------###
+#on peut mettre fin a la fonction ici en return obj,j,x,k
+#puis ecrire une autre fonction de resolution avec le solver choisi
 
-    # Create an NLP solver
+#cela permet de passer deux fois dans la fonction optim pour conserver les parametres des deux essais choisis tout en optimisant une seule fois
+###---------###
+
+    #Create an NLP solver
     prob = {'f': obj, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
     opts = {"ipopt": {"max_iter" :10, "linear_solver":"ma57"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
@@ -1291,24 +1296,24 @@ print('*************************************************************************
 
 #######################################################################################################################
 
-# #Comparaison entre collecte et points optimisés de la figure 1:
-# Pt_collecte=np.array(Pt_collecte)
-# Pt_ancrage = np.array(Pt_ancrage)
-# #fig = plt.figure()
-# ax = plt.subplot(1,2,i+1, projection='3d')
-# ax.set_box_aspect([1.1, 1.8, 1])
-# ax.plot(Pt[:, 0], Pt[:, 1], Pt[:, 2], '.b', label = 'Points de la toile optimisés')
-# ax.plot(Pt_ancrage[:, 0], Pt_ancrage[:, 1], Pt_ancrage[:, 2], '.k', label = 'Points d\'ancrage simulés')
-# ax.plot(Pt[ind_masse, 0], Pt[ind_masse, 1], Pt[ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-# ax.plot(Pt_collecte[0, :], Pt_collecte[1, :], Pt_collecte[2, :], 'xr', label = 'Points collecte')
-# label_masse = labels.index('t' + str(ind_masse))
-# ax.plot(Pt_collecte[0, label_masse], Pt_collecte[1, label_masse], Pt_collecte[2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
-# plt.legend()
-# #plt.title('Essai d\'optimisation améliorée : \n Comparaison de l\'essai statique ' + trial_name + ' \n avec les positions optimisées')
-# plt.title('essai ' + str(i))
-# ax.set_xlabel('x (m)')
-# ax.set_ylabel('y (m)')
-# ax.set_zlabel('z (m)')
+#Comparaison entre collecte et points optimisés de la figure 1:
+Pt_collecte=np.array(Pt_collecte)
+Pt_ancrage = np.array(Pt_ancrage)
+#fig = plt.figure()
+ax = plt.subplot(1,2,i+1, projection='3d')
+ax.set_box_aspect([1.1, 1.8, 1])
+ax.plot(Pt[:, 0], Pt[:, 1], Pt[:, 2], '.b', label = 'Points de la toile optimisés')
+ax.plot(Pt_ancrage[:, 0], Pt_ancrage[:, 1], Pt_ancrage[:, 2], '.k', label = 'Points d\'ancrage simulés')
+ax.plot(Pt[ind_masse, 0], Pt[ind_masse, 1], Pt[ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+ax.plot(Pt_collecte[0, :], Pt_collecte[1, :], Pt_collecte[2, :], 'xr', label = 'Points collecte')
+label_masse = labels.index('t' + str(ind_masse))
+ax.plot(Pt_collecte[0, label_masse], Pt_collecte[1, label_masse], Pt_collecte[2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+plt.legend()
+#plt.title('Essai d\'optimisation améliorée : \n Comparaison de l\'essai statique ' + trial_name + ' \n avec les positions optimisées')
+plt.title('essai ' + str(i))
+ax.set_xlabel('x (m)')
+ax.set_ylabel('y (m)')
+ax.set_zlabel('z (m)')
 
 
 #calcul de l'erreur :
@@ -1330,4 +1335,4 @@ for ind in range (2*n*m) :
 # print('Erreur sur la position : ' +str(erreur_position) + ' m')
 # print('Erreur sur la force : ' +str(erreur_force) + ' N')
 
-#plt.show() #on affiche tous les graphes
+plt.show() #on affiche tous les graphes
