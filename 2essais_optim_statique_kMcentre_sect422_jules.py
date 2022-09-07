@@ -1,4 +1,4 @@
-
+"""
 Calculer position simulation à un certain instant. Pour  prendre la position d'énergie minimale ? cf statique_oblique_nxm
 Pour ça, besoin des fonctions :
 V Param_fixe, Param_variable (dans le programme de minimisation de l'énergie, c,est la fonction Param)
