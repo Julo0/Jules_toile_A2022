@@ -1080,20 +1080,20 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         k_oblique4 = np.mean((k6, k7))  # ressorts obliques quelconques
         k_croix = 3000  # je sais pas
 
-        M1 = Masse_centre/5 #masse centre
-        M2 = Masse_centre/5 #masse centre +1
-        M3 = Masse_centre/5 #masse centre -1
-        M4 = Masse_centre/5 #masse centre +15
-        M5 = Masse_centre/5 #masse centre -15
+        M1 = Masse_essai/5 #masse centre
+        M2 = Masse_essai/5 #masse centre +1
+        M3 = Masse_essai/5 #masse centre -1
+        M4 = Masse_essai/5 #masse centre +15
+        M5 = Masse_essai/5 #masse centre -15
 
         w0_k = [k1, k2, k3, k4, k5, k6, k7, k8, k_oblique1, k_oblique2, k_oblique3, k_oblique4, M1, M2, M3, M4, M5]
         for i in range (len(w0_k)) :
             w0_k[i] = 1*w0_k[i]
 
         lbw_k = [1e-3]*12
-        lbw_k += [0.7*Masse_centre/5]*5
+        lbw_k += [0.7*Masse_essai/5]*5
         ubw_k = [1e6]*12 # bornes très larges
-        ubw_k += [1.3*Masse_centre/5]*5
+        ubw_k += [1.3*Masse_essai/5]*5
 
         return w0_k, lbw_k, ubw_k
 
@@ -1154,16 +1154,9 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
 
         return lbw_Pt, ubw_Pt,w0_Pt
 
-    #RESULTAT COLLECTE pour un essai
-    F_totale_collecte, Pt_collecte, labels, ind_masse = Resultat_PF_collecte(participant,vide_name,trial_name,frame)
-
     # PARAM FIXES
     n = 15
     m = 9
-    dict_fixed_params = Param_fixe(ind_masse, Masse_centre)
-    Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
-
-
 
     #OPTIMISATION :
     # Start with an empty NLP
@@ -1175,21 +1168,33 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     lbg = []
     ubg = []
 
-    #NLP VALUES
-    K = cas.MX.sym('K', 12+5)
 
-    w0_k, lbw_k, ubw_k = k_bounds()
-    lbw += lbw_k
-    ubw += ubw_k
-    w0 += w0_k
-    w += [K]
+    for i in range (len(essais)):
+        Masse_essai = Masse_centre[i]
 
-    for i in range (len(essais)): #nombre d'essais
-        X = cas.MX.sym('X', 2*135 * 3)  # xyz pour chaque point (xyz_0, xyz_1, ...) puis Fxyz       #2 correspond au nombre d'essai qu'on optimise simultanément
+        #RESULTAT COLLECTE pour les essai
+        Resultat_PF_collecte_total = Resultat_PF_collecte(participant[i],vide_name,trial_name[i],frame)
+        F_totale_collecte = Resultat_PF_collecte_total[0]
+        Pt_collecte = Resultat_PF_collecte_total[1]
+        labels = Resultat_PF_collecte_total[2]
+        ind_masse = Resultat_PF_collecte_total[3]
+
+        dict_fixed_params = Param_fixe(ind_masse, Masse_essai)
+        Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
+
+        # NLP VALUES
+        K = cas.MX.sym('K', 12 + 5)
+        X = cas.MX.sym('X', len(essais)*135 * 3)  # xyz pour chaque point (xyz_0, xyz_1, ...) puis Fxyz       #2 correspond au nombre d'essai qu'on optimise simultanément
         if initial_guess == 'interpolation' :
-            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte, Pt_ancrage, labels, F_totale_collecte)
+            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte[i], Pt_ancrage, labels[i], F_totale_collecte[i])
         if initial_guess == 'repos' :
-            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_repos(Pos_repos, Masse_centre)
+            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_repos(Pos_repos, Masse_essai)
+
+        w0_k, lbw_k, ubw_k = k_bounds()
+        lbw += lbw_k
+        ubw += ubw_k
+        w0 += w0_k
+        w += [K]
 
         # w=[k,Pt] :
         lbw += lbw_Pt
@@ -1202,19 +1207,13 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     obj = J(X,K)
 
     #fonction contrainte :
-    g += [K[12] +  K[13] + K[14] + K[15] + K[16] - Masse_centre]
+    g += [K[12] +  K[13] + K[14] + K[15] + K[16] - Masse_essai]
     lbg += [0]
     ubg += [0]
-###---------###
-#on peut mettre fin a la fonction ici en return obj,j,x,k
-#puis ecrire une autre fonction de resolution avec le solver choisi
-
-#cela permet de passer deux fois dans la fonction optim pour conserver les parametres des deux essais choisis tout en optimisant une seule fois
-###---------###
 
     #Create an NLP solver
     prob = {'f': obj, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
-    opts = {"ipopt": {"max_iter" :10, "linear_solver":"ma57"}}
+    opts = {"ipopt": {"max_iter" :10000, "linear_solver":"ma57"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
 
     # Solve the NLP
@@ -1238,25 +1237,25 @@ nb_disques = [1,7] #choix des 2 masses
 frame = 700
 essais+= ['labeled_statique_leftfront_D' + str(nb_disques[0])]
 essais+= ['labeled_statique_leftfront_D' + str(nb_disques[1])]
-
-for i in range (len(essais)): #ici 2 essais seulement
-    trial_name = essais[i]
-    participant = participants[i]
+participant = []           #creation d une liste pour gerer les participants
+trial_name = []             #creation d une liste pour gerer les essais
+Masse_centre = []
+for i in range (len(essais)):           #ici 2 essais seulement
+    trial_name.append(essais[i])
+    participant.append(participants[i-1])
     vide_name = 'labeled_statique_centrefront_vide'
     print(trial_name)
 
-    if participant != 0:        #si humain choisi
+    if participant[i] != 0:        #si humain choisi
         masses = [64.5, 87.2]
-        Masse_centre = masses[participant - 1]
-        print('masse appliquée pour le participant ' + str(participant) + ' = ' + str(Masse_centre) + ' kg')
+        Masse_centre.append(masses[participants[i]-1])  #on recupere dans la liste au-dessus, attention aux indices (-1)
+        print('masse appliquée pour le participant ' + str(participant[i]) + ' = ' + str(Masse_centre[i]) + ' kg')
         frame=3000
 
-    if participant == 0:        #avec des poids
-
-        nb_poids = nb_disques[i]
+    if participant[i] == 0:        #avec des poids
         masses = [0, 27.0, 47.1, 67.3, 87.4, 102.5, 122.6, 142.8, 163.0, 183.1, 203.3, 228.6]
-        Masse_centre = masses[nb_poids]
-        print('masse appliquée pour ' + str(nb_poids) + ' disques = ' + str(Masse_centre) + ' kg')
+        Masse_centre.append(masses[nb_disques[i]])
+        print('masse appliquée pour ' + str(nb_disques[i]) + ' disques = ' + str(Masse_centre[i]) + ' kg')
         frame=700
     print(vide_name)
 
@@ -1269,7 +1268,8 @@ Solution, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fi
 
 k=np.array(Solution[:12])
 M=np.array(Solution[12:17])
-Pt = np.reshape(Solution[17:],(270,3))
+#Pt = np.reshape(Solution[17:],(274,3))
+Pt = np.array(Solution[17:])
 print ('k = ' +str(k))
 print('M = ' + str(M))
 end_main = time.time()
@@ -1282,8 +1282,8 @@ F_totale = cas.evalf(F_totale)
 F_point = cas.evalf(F_point)
 F_point = np.array(F_point)
 # delta = longueur_ressort(dict_fixed_params,Solution[12:],Pt_ancrage)
-print('force totale : ' + str(F_totale) + 'vs' + str(F_totale_collecte))
-print('différence entre les forces : ' + str(F_totale - F_totale_collecte))
+#print('force totale : ' + str(F_totale) + 'vs' + str(F_totale_collecte))
+#print('différence entre les forces : ' + str(F_totale - F_totale_collecte))
 print('**************************************************************************')
 
 
@@ -1297,34 +1297,34 @@ print('*************************************************************************
 #######################################################################################################################
 
 #Comparaison entre collecte et points optimisés de la figure 1:
-Pt_collecte=np.array(Pt_collecte)
-Pt_ancrage = np.array(Pt_ancrage)
-#fig = plt.figure()
-ax = plt.subplot(1,2,i+1, projection='3d')
-ax.set_box_aspect([1.1, 1.8, 1])
-ax.plot(Pt[:, 0], Pt[:, 1], Pt[:, 2], '.b', label = 'Points de la toile optimisés')
-ax.plot(Pt_ancrage[:, 0], Pt_ancrage[:, 1], Pt_ancrage[:, 2], '.k', label = 'Points d\'ancrage simulés')
-ax.plot(Pt[ind_masse, 0], Pt[ind_masse, 1], Pt[ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-ax.plot(Pt_collecte[0, :], Pt_collecte[1, :], Pt_collecte[2, :], 'xr', label = 'Points collecte')
-label_masse = labels.index('t' + str(ind_masse))
-ax.plot(Pt_collecte[0, label_masse], Pt_collecte[1, label_masse], Pt_collecte[2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
-plt.legend()
-#plt.title('Essai d\'optimisation améliorée : \n Comparaison de l\'essai statique ' + trial_name + ' \n avec les positions optimisées')
-plt.title('essai ' + str(i))
-ax.set_xlabel('x (m)')
-ax.set_ylabel('y (m)')
-ax.set_zlabel('z (m)')
+# Pt_collecte=np.array(Pt_collecte)
+# Pt_ancrage = np.array(Pt_ancrage)
+# #fig = plt.figure()
+# ax = plt.subplot(1,2,i+1, projection='3d')
+# ax.set_box_aspect([1.1, 1.8, 1])
+# ax.plot(Pt[:, 0], Pt[:, 1], Pt[:, 2], '.b', label = 'Points de la toile optimisés')
+# ax.plot(Pt_ancrage[:, 0], Pt_ancrage[:, 1], Pt_ancrage[:, 2], '.k', label = 'Points d\'ancrage simulés')
+# ax.plot(Pt[ind_masse, 0], Pt[ind_masse, 1], Pt[ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+# ax.plot(Pt_collecte[0, :], Pt_collecte[1, :], Pt_collecte[2, :], 'xr', label = 'Points collecte')
+# label_masse = labels.index('t' + str(ind_masse))
+# ax.plot(Pt_collecte[0, label_masse], Pt_collecte[1, label_masse], Pt_collecte[2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+# plt.legend()
+# #plt.title('Essai d\'optimisation améliorée : \n Comparaison de l\'essai statique ' + trial_name + ' \n avec les positions optimisées')
+# plt.title('essai ' + str(i))
+# ax.set_xlabel('x (m)')
+# ax.set_ylabel('y (m)')
+# ax.set_zlabel('z (m)')
 
 
 #calcul de l'erreur :
 #sur la position :
-erreur_position = 0
-for ind in range (2*n*m) :
-    if 't' + str(ind) in labels:
-        ind_collecte = labels.index('t' + str(ind))  # ATTENTION gérer les nans
-        for i in range (3) :
-            if np.isnan(Pt_collecte[i, ind_collecte]) == False :  # gérer les nans
-                erreur_position += (Pt[ind, i] - Pt_collecte[i, ind_collecte]) ** 2
+# erreur_position = 0
+# for ind in range (2*n*m) :
+#     if 't' + str(ind) in labels:
+#         ind_collecte = labels.index('t' + str(ind))  # ATTENTION gérer les nans
+#         for i in range (3) :
+#             if np.isnan(Pt_collecte[i, ind_collecte]) == False :  # gérer les nans
+#                 erreur_position += (Pt[ind, i] - Pt_collecte[i, ind_collecte]) ** 2
 
 # erreur_force = 0
 # for ind in range (2*n*m) :
@@ -1335,4 +1335,4 @@ for ind in range (2*n*m) :
 # print('Erreur sur la position : ' +str(erreur_position) + ' m')
 # print('Erreur sur la force : ' +str(erreur_force) + ' N')
 
-plt.show() #on affiche tous les graphes
+#plt.show() #on affiche tous les graphes
