@@ -994,7 +994,7 @@ def Calcul_Pt_F_verif(X, Pt_ancrage, dict_fixed_params, K, ind_masse) :
     return F_totale, F_point
 
 
-def a_minimiser(X, K, F_totale_collecte, Pt_collecte, Pt_ancrage, dict_fixed_params, labels, min_energie, ind_masse):
+def a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte, Pt_ancrage, dict_fixed_params, labels, min_energie, ind_masse):
 
     F_totale, F_point = Calcul_Pt_F(X, Pt_ancrage, dict_fixed_params, K, ind_masse)
     Pt = list2tab(X)
@@ -1037,7 +1037,7 @@ def a_minimiser(X, K, F_totale_collecte, Pt_collecte, Pt_ancrage, dict_fixed_par
             Energie += M[i].T * 9.81 * Pt[i, 2]
 
     output = Difference + Energie*1e-6
-    obj = cas.Function('f', [X, K], [output]).expand()
+    obj = cas.Function('f', [X, K, Ma], [output]).expand()
 
     return obj
 
@@ -1080,22 +1080,33 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         k_oblique4 = np.mean((k6, k7))  # ressorts obliques quelconques
         k_croix = 3000  # je sais pas
 
-        M1 = Masse_essai/5 #masse centre
-        M2 = Masse_essai/5 #masse centre +1
-        M3 = Masse_essai/5 #masse centre -1
-        M4 = Masse_essai/5 #masse centre +15
-        M5 = Masse_essai/5 #masse centre -15
-
-        w0_k = [k1, k2, k3, k4, k5, k6, k7, k8, k_oblique1, k_oblique2, k_oblique3, k_oblique4, M1, M2, M3, M4, M5]
+        w0_k = [k1, k2, k3, k4, k5, k6, k7, k8, k_oblique1, k_oblique2, k_oblique3, k_oblique4]
         for i in range (len(w0_k)) :
             w0_k[i] = 1*w0_k[i]
 
-        lbw_k = [1e-3]*12
-        lbw_k += [0.7*Masse_essai/5]*5
-        ubw_k = [1e6]*12 # bornes très larges
-        ubw_k += [1.3*Masse_essai/5]*5
+        lbw_k = [1e-3] * 12
+        ubw_k = [1e6] * 12  # bornes très larges
 
         return w0_k, lbw_k, ubw_k
+
+    def m_bounds (masse_essai):
+        """
+        Calculer les limites et l'initial guess des masses
+        :return:
+        """
+        lbw_m, ubw_m  = [], []
+
+        M1 = masse_essai/5 #masse centre
+        M2 = masse_essai/5 #masse centre +1
+        M3 = masse_essai/5 #masse centre -1
+        M4 = masse_essai/5 #masse centre +15
+        M5 = masse_essai/5 #masse centre -15
+
+        w0_m = [M1, M2, M3, M4, M5]
+        lbw_m += [0.7*masse_essai/5]*5
+        ubw_m += [1.3*masse_essai/5]*5
+
+        return w0_m, lbw_m, ubw_m
 
     def Pt_bounds_interp(Pt_collecte, Pt_ancrage, labels, F_totale_collecte) :
         """
@@ -1168,9 +1179,16 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     lbg = []
     ubg = []
 
+    #K
+    K = cas.MX.sym('K', 12)
+    w0_k, lbw_k, ubw_k = k_bounds()
+    w0 += w0_k
+    lbw += lbw_k
+    ubw += ubw_k
+    w += [K]
 
     for i in range (len(essais)):
-        Masse_essai = Masse_centre[i]
+        masse_essai = Masse_centre[i]
 
         #RESULTAT COLLECTE pour les essai
         Resultat_PF_collecte_total = Resultat_PF_collecte(participant[i],vide_name,trial_name[i],frame)
@@ -1179,37 +1197,39 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         labels = Resultat_PF_collecte_total[2]
         ind_masse = Resultat_PF_collecte_total[3]
 
-        dict_fixed_params = Param_fixe(ind_masse, Masse_essai)
+        dict_fixed_params = Param_fixe(ind_masse, Masse_centre[i])
         Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
 
         # NLP VALUES
-        K = cas.MX.sym('K', 12 + 5)
+        Ma = cas.MX.sym('Ma', len(essais)*5)
         X = cas.MX.sym('X', len(essais)*135 * 3)  # xyz pour chaque point (xyz_0, xyz_1, ...) puis Fxyz       #2 correspond au nombre d'essai qu'on optimise simultanément
         if initial_guess == 'interpolation' :
-            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte[i], Pt_ancrage, labels[i], F_totale_collecte[i])
+            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte, Pt_ancrage, labels, F_totale_collecte)
         if initial_guess == 'repos' :
-            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_repos(Pos_repos, Masse_essai)
+            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_repos(Pos_repos, Masse_centre[i])
 
-        w0_k, lbw_k, ubw_k = k_bounds()
-        lbw += lbw_k
-        ubw += ubw_k
-        w0 += w0_k
-        w += [K]
+        #Ma
+        w0_m, lbw_m, ubw_m = m_bounds(masse_essai)
+        w0 += w0_m
+        lbw += lbw_m
+        ubw += ubw_m
+        w += [Ma]
 
-        # w=[k,Pt] :
+        #X
         lbw += lbw_Pt
         ubw += ubw_Pt
         w0 += w0_Pt
-    w += [X]
+        w += [X]
+
+        # fonction contrainte :
+        g += [w0_m[0] + w0_m[1] +w0_m[2] + w0_m[3] + w0_m[4] - Masse_centre[i]]
+        lbg += [0]
+        ubg += [0]
 
     #en statique on ne fait pas de boucle sur le temps :
-    J = a_minimiser(X, K, F_totale_collecte, Pt_collecte, Pt_ancrage,dict_fixed_params,labels,min_energie, ind_masse)
-    obj = J(X,K)
+    J = a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte, Pt_ancrage,dict_fixed_params,labels,min_energie, ind_masse)
+    obj = J(X,K,Ma)
 
-    #fonction contrainte :
-    g += [K[12] +  K[13] + K[14] + K[15] + K[16] - Masse_essai]
-    lbg += [0]
-    ubg += [0]
 
     #Create an NLP solver
     prob = {'f': obj, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
