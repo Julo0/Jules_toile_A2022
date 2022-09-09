@@ -129,7 +129,7 @@ def Param_fixe(ind_masse,Masse_centre):
 
     return dict_fixed_params  # np
 
-def Param_variable(k_type, ind_masse):
+def Param_variable(k_type):
     """
     Répartir les raideurs des ressorts à partir des différents types de ressorts
     :param k_type: cas.MX(12): les 12 types de ressorts qu'on retrouve dans la toile (8 structurels, 4 cisaillement)
@@ -198,32 +198,36 @@ def Param_variable(k_type, ind_masse):
     for j in range (1,7) :
         k_oblique[2 + 2*j*(n-1) : 26 + 2*j*(n-1)] = k_oblique_4
 
+    return k,k_oblique
 ######################################################################################################################
-        Mtoile = 7.15
-        Mressort = 0.324
-        mcoin = Mtoile / (Nb_ressorts_vert + Nb_ressorts_horz) + (
-                37 / (n - 1) + 18 / (m - 1)) * Mressort / 4  # masse d'un point se trouvant sur un coin de la toile
-        mgrand = 1.5 * Mtoile / (Nb_ressorts_vert + Nb_ressorts_horz) + 37 * Mressort / (
-                2 * (n - 1))  # masse d'un point se trouvant sur le grand cote de la toile
-        mpetit = 1.5 * Mtoile / (Nb_ressorts_vert + Nb_ressorts_horz) + 18 * Mressort / (
-                2 * (m - 1))  # masse d'un point se trouvant sur le petit cote de la toile
-        mmilieu = 2 * Mtoile / (
-                    Nb_ressorts_vert + Nb_ressorts_horz)  # masse d'un point se trouvant au milieu de la toile
 
-        M = mmilieu * cas.MX.ones(n * m)  # on initialise toutes les masses a celle du centre
-        M[0], M[n - 1], M[n * (m - 1)], M[n * m - 1] = mcoin, mcoin, mcoin, mcoin
-        M[n:n * (m - 1):n] = mpetit  # masses du cote bas
-        M[2 * n - 1:n * m - 1:n] = mpetit  # masses du cote haut
-        M[1:n - 1] = mgrand  # masse du cote droit
-        M[n * (m - 1) + 1:n * m - 1] = mgrand  # masse du cote gauche
-        # if masse_type == 'repartie' :
-        M[ind_masse] += k_type[12]
-        M[ind_masse + 1]+= k_type[13]
-        M[ind_masse - 1] += k_type[14]
-        M[ind_masse + 15] += k_type[15]
-        M[ind_masse - 15] += k_type[16]
+def Param_variable_masse(ind_masse, Ma):
+    Mtoile = 7.15
+    Mressort = 0.324
+    mcoin = Mtoile / (Nb_ressorts_vert + Nb_ressorts_horz) + (
+            37 / (n - 1) + 18 / (m - 1)) * Mressort / 4  # masse d'un point se trouvant sur un coin de la toile
+    mgrand = 1.5 * Mtoile / (Nb_ressorts_vert + Nb_ressorts_horz) + 37 * Mressort / (
+            2 * (n - 1))  # masse d'un point se trouvant sur le grand cote de la toile
+    mpetit = 1.5 * Mtoile / (Nb_ressorts_vert + Nb_ressorts_horz) + 18 * Mressort / (
+            2 * (m - 1))  # masse d'un point se trouvant sur le petit cote de la toile
+    mmilieu = 2 * Mtoile / (
+                Nb_ressorts_vert + Nb_ressorts_horz)  # masse d'un point se trouvant au milieu de la toile
 
-    return k,k_oblique, M  #  sx
+    M = mmilieu * cas.MX.ones(n * m)  # on initialise toutes les masses a celle du centre
+    M[0], M[n - 1], M[n * (m - 1)], M[n * m - 1] = mcoin, mcoin, mcoin, mcoin
+    M[n:n * (m - 1):n] = mpetit  # masses du cote bas
+    M[2 * n - 1:n * m - 1:n] = mpetit  # masses du cote haut
+    M[1:n - 1] = mgrand  # masse du cote droit
+    M[n * (m - 1) + 1:n * m - 1] = mgrand  # masse du cote gauche
+    # if masse_type == 'repartie' :
+    for i in range (len(essais)):
+        M[ind_masse] += Ma[0] #+ 5*i]
+        M[ind_masse + 1]+= Ma[1] #+ 5*i]
+        M[ind_masse - 1] += Ma[2]# + 5*i]
+        M[ind_masse + 15] += Ma[3] #+ 5*i]
+        M[ind_masse - 15] += Ma[4]# + 5*i]
+
+    return M
 
 def rotation_points (Pos_repos,Pt_ancrage) :
     """
@@ -953,8 +957,9 @@ def tab2list (tab) :
             list[j + 3 * i] = tab[i, j]
     return list
 
-def Calcul_Pt_F(X, Pt_ancrage, dict_fixed_params, K, ind_masse) :
-    k, k_croix, M = Param_variable(K, ind_masse)
+def Calcul_Pt_F(X, Pt_ancrage, dict_fixed_params, K, ind_masse, Ma) :
+    k, k_croix= Param_variable(K)
+    M = Param_variable_masse(ind_masse, Ma)
     Pt = list2tab(X[:135*3])
 
     Spring_bout_1, Spring_bout_2 = Spring_bouts(Pt, Pt_ancrage)
@@ -975,8 +980,9 @@ def Calcul_Pt_F(X, Pt_ancrage, dict_fixed_params, K, ind_masse) :
 
     return F_totale, F_point
 
-def Calcul_Pt_F_verif(X, Pt_ancrage, dict_fixed_params, K, ind_masse) :
-    k, k_croix, M = Param_variable(K, ind_masse)
+def Calcul_Pt_F_verif(X, Pt_ancrage, dict_fixed_params, K, ind_masse, Ma) :
+    k, k_croix = Param_variable(K)
+    M = Param_variable_masse(ind_masse, Ma)
     Pt = list2tab(X)
 
     Spring_bout_1, Spring_bout_2 = Spring_bouts(Pt, Pt_ancrage)
@@ -996,7 +1002,7 @@ def Calcul_Pt_F_verif(X, Pt_ancrage, dict_fixed_params, K, ind_masse) :
 
 def a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte, Pt_ancrage, dict_fixed_params, labels, min_energie, ind_masse):
 
-    F_totale, F_point = Calcul_Pt_F(X, Pt_ancrage, dict_fixed_params, K, ind_masse)
+    F_totale, F_point = Calcul_Pt_F(X, Pt_ancrage, dict_fixed_params, K, ind_masse, Ma)
     Pt = list2tab(X)
     Pt_inter = interpolation_collecte(Pt_collecte, Pt_ancrage, labels)
 
@@ -1020,7 +1026,8 @@ def a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte, Pt_ancrage, dict_fixed
     if min_energie == 1 :
         l_repos = dict_fixed_params['l_repos']
         l_repos_croix = dict_fixed_params['l_repos_croix']
-        k, k_croix, M = Param_variable(K, ind_masse)
+        k, k_croix = Param_variable(K)
+        M = Param_variable_masse(ind_masse, Ma)
 
         Spring_bout_1, Spring_bout_2 = Spring_bouts(Pt, Pt_ancrage)
         Spring_bout_croix_1, Spring_bout_croix_2 = Spring_bouts_croix(Pt)
@@ -1201,8 +1208,8 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
 
         # NLP VALUES
-        Ma = cas.MX.sym('Ma', len(essais)*5)
-        X = cas.MX.sym('X', len(essais)*135 * 3)  # xyz pour chaque point (xyz_0, xyz_1, ...) puis Fxyz       #2 correspond au nombre d'essai qu'on optimise simultanément
+        Ma = cas.MX.sym('Ma', 5)
+        X = cas.MX.sym('X', 135*3)  # xyz pour chaque point (xyz_0, xyz_1, ...) puis Fxyz
         if initial_guess == 'interpolation' :
             lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte, Pt_ancrage, labels, F_totale_collecte)
         if initial_guess == 'repos' :
@@ -1226,9 +1233,9 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         lbg += [0]
         ubg += [0]
 
-    #en statique on ne fait pas de boucle sur le temps :
-    J = a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte, Pt_ancrage,dict_fixed_params,labels,min_energie, ind_masse)
-    obj = J(X,K,Ma)
+        #en statique on ne fait pas de boucle sur le temps :
+        J = a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte, Pt_ancrage,dict_fixed_params,labels,min_energie, ind_masse)
+        obj = J(X,K,Ma)
 
 
     #Create an NLP solver
@@ -1241,7 +1248,6 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     w_opt = sol['x'].full().flatten()
 
     return w_opt, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params
-
 
 ##########################################################################################################################
 
