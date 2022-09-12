@@ -1248,7 +1248,7 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
 
     #Create an NLP solver
     prob = {'f': obj, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
-    opts = {"ipopt": {"max_iter" :10000, "linear_solver":"ma57"}}
+    opts = {"ipopt": {"max_iter" :5, "linear_solver":"ma57"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
 
     # Solve the NLP
@@ -1263,22 +1263,33 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
 min_energie = 1 #0 #1
 initial_guess= 'interpolation' #'interpolation' #'repos'
 
-#Liste des deux essais a optimiser
-essais = []
-participants = [0,0]
-nb_disques = [1,7] #choix des 2 masses
-#premier essai
+#RECUPERATION DES ESSAIS A OPTIMISER
+
 frame = 700
-essais+= ['labeled_statique_leftfront_D' + str(nb_disques[0])]
-essais+= ['labeled_statique_leftfront_D' + str(nb_disques[1])]
+Nb_essais_a_optimiser = 9
+essais = []
+participants = [0]*Nb_essais_a_optimiser
+nb_disques = [1,2,3,4,5,7,8,9,11]*3 #3 zones sur le trampoline
+
+for i in range (0,9) : #9 essais par zone
+    essais += ['labeled_statique_centrefront_D' + str(nb_disques[i])]
+# for i in range (0,9) : #9 essais par zone
+#     essais += ['labeled_statique_D' + str(nb_disques[i])]
+# for i in range (0,9) : #9 essais par zone
+#     essais += ['labeled_statique_leftfront_D' + str(nb_disques[i])]
+#essais += ['labeled_statique_leftfront_plaque']
+#essais += ['labeled_statique_left_planche']
+#essais += ['labeled_statique_plaque']
+
 participant = []           #creation d une liste pour gerer les participants
 trial_name = []             #creation d une liste pour gerer les essais
 Masse_centre = []
-for i in range (len(essais)):           #ici 2 essais seulement
+
+for i in range (len(essais)):           #ici 27 essais (sur 3 zones)
     trial_name.append(essais[i])
     participant.append(participants[i-1])
     vide_name = 'labeled_statique_centrefront_vide'
-    print(trial_name)
+    print(trial_name[i])
 
     if participant[i] != 0:        #si humain choisi
         masses = [64.5, 87.2]
@@ -1291,7 +1302,7 @@ for i in range (len(essais)):           #ici 2 essais seulement
         Masse_centre.append(masses[nb_disques[i]])
         print('masse appliquée pour ' + str(nb_disques[i]) + ' disques = ' + str(Masse_centre[i]) + ' kg')
         frame=700
-    print(vide_name)
+print(vide_name)
 
 
 ########################################################################################################################
@@ -1301,14 +1312,37 @@ start_main = time.time()
 Solution, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params = Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initial_guess, min_energie)
 
 #recuperation et affichage
+M_centrefront = []
+Pt_centrefront = []
+M_statique = []
+Pt_statique = []
+M_leftfront = []
+Pt_leftfront = []
+
+#Raideurs
 k=np.array(Solution[:12])
-M1=np.array(Solution[12:17])
-M2=np.array(Solution[422:427])
+print ('k = ' +str(k))
+#Masses
+for i in range (0,9): # nombre d essais centrefront
+    M_centrefront += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+for i in range (0,9):
+    print('M_centrefront_' + str(i) + ' = '+ str(M_centrefront[i]))
+
+# for i in range (9,18): #nb essais statique
+#     M_statique += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+# for i in range(0, 9):
+#     print('M_statique_' + str(i) + ' = ' + str(M_statique[i]))
+#
+# for i in range (18,27): #nb essais leftfront
+#     M_leftfront += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+# for i in range(0, 9):
+#     print('M_leftfront_' + str(i) + ' = ' + str(M_leftfront[i]))
+
+#Points
 Pt1 = np.reshape(Solution[17:422],(135,3))
 Pt2 = np.reshape(Solution[427:832],(135,3))
-print ('k = ' +str(k))
-print('M1 = ' + str(M1))
-print('M2 = ' + str(M2))
+
+
 end_main = time.time()
 
 print('**************************************************************************')
@@ -1328,7 +1362,8 @@ F_point2 = np.array(F_point1)
 print('**************************************************************************')
 
 ############################################################################################################
-#Comparaison entre collecte et points optimisés de l'essai 1:
+#Comparaison entre collecte et points optimisés des 27 essais choisis :
+#CENTREFRONT
 Pt_collecte1 = np.array(Pt_collecte[0])
 Pt_ancrage1 = np.array(Pt_ancrage[0])
 fig = plt.figure()
