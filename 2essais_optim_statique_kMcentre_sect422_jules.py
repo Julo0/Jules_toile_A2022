@@ -1198,6 +1198,7 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     Pt_collecte = []
     Pt_ancrage = []
 
+    obj = 0
     for i in range (len(essais)):
         masse_essai = Masse_centre[i]
 
@@ -1236,13 +1237,13 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         w += [X]
 
         # fonction contrainte :
-        g += [w0_m[0] + w0_m[1] +w0_m[2] + w0_m[3] + w0_m[4] - Masse_centre[i]]
+        g += [Ma[0] + Ma[1] +Ma[2] + Ma[3] + Ma[4] - Masse_centre[i]]
         lbg += [0]
         ubg += [0]
 
         #en statique on ne fait pas de boucle sur le temps :
         J = a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte[i], Pt_ancrage[i],dict_fixed_params,labels,min_energie, ind_masse)
-        obj = J(X,K,Ma)
+        obj += J(X,K,Ma)
 
 
     #Create an NLP solver
