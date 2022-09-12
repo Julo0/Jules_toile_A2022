@@ -1248,7 +1248,7 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
 
     #Create an NLP solver
     prob = {'f': obj, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
-    opts = {"ipopt": {"max_iter" :5, "linear_solver":"ma57"}}
+    opts = {"ipopt": {"max_iter" :30000, "linear_solver":"ma57"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
 
     # Solve the NLP
@@ -1266,26 +1266,30 @@ initial_guess= 'interpolation' #'interpolation' #'repos'
 #RECUPERATION DES ESSAIS A OPTIMISER
 
 frame = 700
-Nb_essais_a_optimiser = 9
+Nb_essais_a_optimiser = 40
 essais = []
 participants = [0]*Nb_essais_a_optimiser
-nb_disques = [1,2,3,4,5,7,8,9,11]*3 #3 zones sur le trampoline
+nb_disques = [1,2,3,4,5,7,8,9,11]*4 + [0]*4
 
 for i in range (0,9) : #9 essais par zone
     essais += ['labeled_statique_centrefront_D' + str(nb_disques[i])]
-# for i in range (0,9) : #9 essais par zone
-#     essais += ['labeled_statique_D' + str(nb_disques[i])]
-# for i in range (0,9) : #9 essais par zone
-#     essais += ['labeled_statique_leftfront_D' + str(nb_disques[i])]
-#essais += ['labeled_statique_leftfront_plaque']
-#essais += ['labeled_statique_left_planche']
-#essais += ['labeled_statique_plaque']
+for i in range (0,9) : #9 essais par zone
+     essais += ['labeled_statique_D' + str(nb_disques[i])]
+for i in range (0,9) : #9 essais par zone
+     essais += ['labeled_statique_leftfront_D' + str(nb_disques[i])]
+for i in range (0,9) : #9 essais par zone
+     essais += ['labeled_statique_left_D' + str(nb_disques[i])]
+#autres essais#
+essais += ['labeled_statique_leftfront_plaque']
+essais += ['labeled_statique_left_planche']
+essais += ['labeled_statique_plaque']
+essais += ['labeled_statique_centrefront_plaque']
 
-participant = []           #creation d une liste pour gerer les participants
+participant = []            #creation d une liste pour gerer les participants
 trial_name = []             #creation d une liste pour gerer les essais
-Masse_centre = []
+Masse_centre = []           #creation d une liste pour gerer les masses
 
-for i in range (len(essais)):           #ici 27 essais (sur 3 zones)
+for i in range (len(essais)):           #ici 40 essais
     trial_name.append(essais[i])
     participant.append(participants[i-1])
     vide_name = 'labeled_statique_centrefront_vide'
@@ -1293,7 +1297,7 @@ for i in range (len(essais)):           #ici 27 essais (sur 3 zones)
 
     if participant[i] != 0:        #si humain choisi
         masses = [64.5, 87.2]
-        Masse_centre.append(masses[participants[i]-1])  #on recupere dans la liste au-dessus, attention aux indices (-1)
+        Masse_centre.append(masses[participants[i]-1])  #on recupere dans la liste au-dessus, attention aux indices ...(-1)
         print('masse appliquée pour le participant ' + str(participant[i]) + ' = ' + str(Masse_centre[i]) + ' kg')
         frame=3000
 
@@ -1311,7 +1315,7 @@ start_main = time.time()
 
 Solution, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params = Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initial_guess, min_energie)
 
-#recuperation et affichage
+####recuperation et affichage####
 M_centrefront = []
 Pt_centrefront = []
 F_totale_centrefront = []
@@ -1323,34 +1327,63 @@ M_statique = []
 Pt_statique = []
 F_totale_statique = []
 F_point_statique = []
+Pt_collecte_statique = []
+Pt_ancrage_statique = []
 
 M_leftfront = []
 Pt_leftfront = []
 F_totale_leftfront = []
 F_point_leftfront = []
+Pt_collecte_leftfront = []
+Pt_ancrage_leftfront = []
 
-#Raideurs
+M_left = []
+Pt_left= []
+F_totale_left = []
+F_point_left = []
+Pt_collecte_left= []
+Pt_ancrage_left= []
+
+M_autre = []
+Pt_autre= []
+F_totale_autre = []
+F_point_autre = []
+Pt_collecte_autre= []
+Pt_ancrage_autre= []
+
+#Raideurs#
 k=np.array(Solution[:12])
 print ('k = ' +str(k))
-#Masses
-for i in range (0,Nb_essais_a_optimiser): # nombre d essais centrefront
+
+#Masses#
+for i in range (0,Nb_essais_a_optimiser): # nombre essais centrefront
     M_centrefront.append(np.array(Solution[12+405*i+5*i : 17+405*i+5*i]))
 for i in range (0,Nb_essais_a_optimiser):
     print('M_centrefront_' + str(i) + ' = '+ str(M_centrefront[i]))
 
-# for i in range (9,18): #nb essais statique
-#     M_statique += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
-# for i in range(0, 9):
-#     print('M_statique_' + str(i) + ' = ' + str(M_statique[i]))
-#
-# for i in range (18,27): #nb essais leftfront
-#     M_leftfront += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
-# for i in range(0, 9):
-#     print('M_leftfront_' + str(i) + ' = ' + str(M_leftfront[i]))
+for i in range (9,18): #nb essais statique : 9
+    M_statique += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+for i in range(0, 9):
+    print('M_statique_' + str(i) + ' = ' + str(M_statique[i]))
 
-#Points
+for i in range (18,27): #nb essais leftfront: 9
+    M_leftfront += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+for i in range(0, 9):
+    print('M_leftfront_' + str(i) + ' = ' + str(M_leftfront[i]))
+
+for i in range (27,36): #nb essais left: 9
+    M_left += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+for i in range(0, 9):
+    print('M_left_' + str(i) + ' = ' + str(M_left[i]))
+
+for i in range (36,40): #nb essais autre: 4
+    M_autre += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+for i in range(0, 9):
+    print('M_autre_' + str(i) + ' = ' + str(M_autre[i]))
+
+#Points#
 ###centrefront###
-for i in range (0,Nb_essais_a_optimiser):
+for i in range (0,9):
     Pt_centrefront.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
     F_totale_centrefront.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
     F_point_centrefront.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
@@ -1361,31 +1394,71 @@ for i in range (0,Nb_essais_a_optimiser):
 
     Pt_collecte_centrefront.append(np.array(Pt_collecte[i]))
     Pt_ancrage_centrefront.append(np.array(Pt_ancrage[i]))
+###statique###
+for i in range(9, 18):
+    Pt_statique.append(np.reshape(Solution[17 + 405 * i + 5 * i: 422 + 405 * i + 5 * i], (135, 3)))
+    F_totale_statique.append(
+        Calcul_Pt_F_verif(Solution[17 + 405 * i + 5 * i:422 + 405 * i + 5 * i], Pt_ancrage[i], dict_fixed_params,
+                          Solution[:12], ind_masse, Solution[12 + 405 * i + 5 * i:17 + 405 * i + 5 * i])[0])
+    F_point_statique.append(
+        Calcul_Pt_F_verif(Solution[17 + 405 * i + 5 * i:422 + 405 * i + 5 * i], Pt_ancrage[i], dict_fixed_params,
+                          Solution[:12], ind_masse, Solution[12 + 405 * i + 5 * i:17 + 405 * i + 5 * i])[1])
 
+    F_totale_statique[i] = cas.evalf(F_totale_statique[i])
+    F_point_statique[i] = cas.evalf(F_point_statique[i])
+    F_point_statique[i] = np.array(F_point_statique[i])
+
+    Pt_collecte_statique.append(np.array(Pt_collecte[i]))
+    Pt_ancrage_statique.append(np.array(Pt_ancrage[i]))
+###leftfront###
+for i in range (18,27):
+    Pt_leftfront.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
+    F_totale_leftfront.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
+    F_point_leftfront.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
+
+    F_totale_leftfront[i] = cas.evalf(F_totale_leftfront[i])
+    F_point_leftfront[i] = cas.evalf(F_point_leftfront[i])
+    F_point_leftfront[i] = np.array(F_point_leftfront[i])
+
+    Pt_collecte_leftfront.append(np.array(Pt_collecte[i]))
+    Pt_ancrage_leftfront.append(np.array(Pt_ancrage[i]))
+###left###
+for i in range (27,36):
+    Pt_left.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
+    F_totale_left.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
+    F_point_left.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
+
+    F_totale_left[i] = cas.evalf(F_totale_left[i])
+    F_point_left[i] = cas.evalf(F_point_left[i])
+    F_point_left[i] = np.array(F_point_left[i])
+
+    Pt_collecte_left.append(np.array(Pt_collecte[i]))
+    Pt_ancrage_left.append(np.array(Pt_ancrage[i]))
+###autres###
+for i in range (36,40):
+    Pt_autre.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
+    F_totale_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
+    F_point_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
+
+    F_totale_autre[i] = cas.evalf(F_totale_autre[i])
+    F_point_autre[i] = cas.evalf(F_point_autre[i])
+    F_point_autre[i] = np.array(F_point_autre[i])
+
+    Pt_collecte_autre.append(np.array(Pt_collecte[i]))
+    Pt_ancrage_autre.append(np.array(Pt_ancrage[i]))
 
 end_main = time.time()
-
 print('**************************************************************************')
 print ('Temps total : ' + str(end_main - start_main))
-
-# #ESSAI 1
-# F_totale1, F_point1 = Calcul_Pt_F_verif(Solution[17:422], Pt_ancrage[0], dict_fixed_params, Solution[:12], ind_masse,Solution[12:17])
-# F_totale1 = cas.evalf(F_totale1)
-# F_point1 = cas.evalf(F_point1)
-# F_point1 = np.array(F_point1)
-# #ESSAI 2
-# F_totale2, F_point2 = Calcul_Pt_F_verif(Solution[427:832], Pt_ancrage[1], dict_fixed_params, Solution[:12], ind_masse,Solution[422:427])
-# F_totale2 = cas.evalf(F_totale1)
-# F_point2 = cas.evalf(F_point1)
-# F_point2 = np.array(F_point1)
-
 print('**************************************************************************')
 
-############################################################################################################
-#Comparaison entre collecte et points optimisés des essais choisis :
+#######################################################################################################################
+
+#Comparaison entre collecte et points optimisés des essais choisis
+
 #CENTREFRONT#
 fig = plt.figure()
-for i in range (0,Nb_essais_a_optimiser):
+for i in range (0,9):
     ax = plt.subplot(3,3,i+1, projection='3d')
     ax.set_box_aspect([1.1, 1.8, 1])
     ax.plot(Pt_centrefront[i][:, 0], Pt_centrefront[i][:, 1], Pt_centrefront[i][:, 2], '.b', label = 'Points de la toile optimisés')
@@ -1395,31 +1468,78 @@ for i in range (0,Nb_essais_a_optimiser):
     label_masse = labels.index('t' + str(ind_masse))
     ax.plot(Pt_collecte_centrefront[i][0, label_masse], Pt_collecte_centrefront[i][1, label_masse], Pt_collecte_centrefront[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
     plt.legend()
-    #plt.title('Essai d\'optimisation améliorée : \n Comparaison de l\'essai statique ' + trial_name + ' \n avec les positions optimisées')
-    plt.title('ESSAI 1 fusion ' + str(trial_name[0]) + ' ET ' + str(trial_name[1]))
+    plt.title('ESSAI' + str(trial_name[i]))
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
     ax.set_zlabel('z (m)')
 
-# #Comparaison entre collecte et points optimisés de l'essai 2:
-# Pt_collecte2 = np.array(Pt_collecte[1])
-# Pt_ancrage2 = np.array(Pt_ancrage[1])
-# fig = plt.figure()
-# ax = plt.subplot(1,1,1, projection='3d')
-# ax.set_box_aspect([1.1, 1.8, 1])
-# ax.plot(Pt2[:, 0], Pt2[:, 1], Pt2[:, 2], '.b', label = 'Points de la toile optimisés')
-# ax.plot(Pt_ancrage2[:, 0], Pt_ancrage2[:, 1], Pt_ancrage2[:, 2], '.k', label = 'Points d\'ancrage simulés')
-# ax.plot(Pt2[ind_masse, 0], Pt2[ind_masse, 1], Pt2[ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-# ax.plot(Pt_collecte2[0, :], Pt_collecte2[1, :], Pt_collecte2[2, :], 'xr', label = 'Points collecte')
-# label_masse = labels.index('t' + str(ind_masse))
-# ax.plot(Pt_collecte2[0, label_masse], Pt_collecte2[1, label_masse], Pt_collecte2[2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
-# plt.legend()
-# #plt.title('Essai d\'optimisation améliorée : \n Comparaison de l\'essai statique ' + trial_name + ' \n avec les positions optimisées')
-# plt.title('ESSAI 2 fusion ' + str(trial_name[0]) + ' ET ' + str(trial_name[1]))
-# ax.set_xlabel('x (m)')
-# ax.set_ylabel('y (m)')
-# ax.set_zlabel('z (m)')
+#STATIQUE#
+fig = plt.figure()
+for i in range (0,9):
+    ax = plt.subplot(3,3,i+1, projection='3d')
+    ax.set_box_aspect([1.1, 1.8, 1])
+    ax.plot(Pt_statique[i][:, 0], Pt_statique[i][:, 1], Pt_statique[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_ancrage_statique[i][:, 0], Pt_ancrage_statique[i][:, 1], Pt_ancrage_statique[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
+    ax.plot(Pt_statique[i][ind_masse, 0], Pt_statique[i][ind_masse, 1], Pt_statique[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_statique[i][0, :], Pt_collecte_statique[i][1, :], Pt_collecte_statique[i][2, :], 'xr', label = 'Points collecte')
+    label_masse = labels.index('t' + str(ind_masse))
+    ax.plot(Pt_collecte_statique[i][0, label_masse], Pt_collecte_statique[i][1, label_masse], Pt_collecte_statique[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    plt.legend()
+    plt.title('ESSAI' + str(trial_name[i+9]))
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_zlabel('z (m)')
 
+#LEFTFRONT#
+fig = plt.figure()
+for i in range (0,9):
+    ax = plt.subplot(3,3,i+1, projection='3d')
+    ax.set_box_aspect([1.1, 1.8, 1])
+    ax.plot(Pt_leftfront[i][:, 0], Pt_leftfront[i][:, 1], Pt_leftfront[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_ancrage_leftfront[i][:, 0], Pt_ancrage_leftfront[i][:, 1], Pt_ancrage_leftfront[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
+    ax.plot(Pt_leftfront[i][ind_masse, 0], Pt_leftfront[i][ind_masse, 1], Pt_leftfront[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_leftfront[i][0, :], Pt_collecte_leftfront[i][1, :], Pt_collecte_leftfront[i][2, :], 'xr', label = 'Points collecte')
+    label_masse = labels.index('t' + str(ind_masse))
+    ax.plot(Pt_collecte_leftfront[i][0, label_masse], Pt_collecte_leftfront[i][1, label_masse], Pt_collecte_leftfront[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    plt.legend()
+    plt.title('ESSAI' + str(trial_name[i+18]))
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_zlabel('z (m)')
+
+#LEFT#
+fig = plt.figure()
+for i in range (0,9):
+    ax = plt.subplot(3,3,i+1, projection='3d')
+    ax.set_box_aspect([1.1, 1.8, 1])
+    ax.plot(Pt_left[i][:, 0], Pt_left[i][:, 1], Pt_left[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_ancrage_left[i][:, 0], Pt_ancrage_left[i][:, 1], Pt_ancrage_left[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
+    ax.plot(Pt_left[i][ind_masse, 0], Pt_left[i][ind_masse, 1], Pt_left[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_left[i][0, :], Pt_collecte_left[i][1, :], Pt_collecte_left[i][2, :], 'xr', label = 'Points collecte')
+    label_masse = labels.index('t' + str(ind_masse))
+    ax.plot(Pt_collecte_left[i][0, label_masse], Pt_collecte_left[i][1, label_masse], Pt_collecte_left[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    plt.legend()
+    plt.title('ESSAI' + str(trial_name[i+27]))
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_zlabel('z (m)')
+
+#AUTRE#
+fig = plt.figure()
+for i in range (0,9):
+    ax = plt.subplot(3,3,i+1, projection='3d')
+    ax.set_box_aspect([1.1, 1.8, 1])
+    ax.plot(Pt_autre[i][:, 0], Pt_autre[i][:, 1], Pt_autre[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_ancrage_autre[i][:, 0], Pt_ancrage_autre[i][:, 1], Pt_ancrage_autre[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
+    ax.plot(Pt_autre[i][ind_masse, 0], Pt_autre[i][ind_masse, 1], Pt_autre[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_autre[i][0, :], Pt_collecte_autre[i][1, :], Pt_collecte_autre[i][2, :], 'xr', label = 'Points collecte')
+    label_masse = labels.index('t' + str(ind_masse))
+    ax.plot(Pt_collecte_autre[i][0, label_masse], Pt_collecte_autre[i][1, label_masse], Pt_collecte_autre[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    plt.legend()
+    plt.title('ESSAI' + str(trial_name[i+36]))
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_zlabel('z (m)')
 
 #calcul de l'erreur :
 #sur la position :
