@@ -1266,10 +1266,10 @@ initial_guess= 'interpolation' #'interpolation' #'repos'
 #RECUPERATION DES ESSAIS A OPTIMISER
 
 frame = 700
-Nb_essais_a_optimiser = 40
+Nb_essais_a_optimiser = 36
 essais = []
 participants = [0]*Nb_essais_a_optimiser
-nb_disques = [1,2,3,4,5,7,8,9,11]*4 + [0]*4
+nb_disques = [1,2,3,4,5,7,8,9,11]*4 #+ [0]*4
 
 for i in range (0,9) : #9 essais par zone
     essais += ['labeled_statique_centrefront_D' + str(nb_disques[i])]
@@ -1280,10 +1280,10 @@ for i in range (0,9) : #9 essais par zone
 for i in range (0,9) : #9 essais par zone
      essais += ['labeled_statique_left_D' + str(nb_disques[i])]
 #autres essais#
-essais += ['labeled_statique_leftfront_plaque']
-essais += ['labeled_statique_left_planche']
-essais += ['labeled_statique_plaque']
-essais += ['labeled_statique_centrefront_plaque']
+# essais += ['labeled_statique_leftfront_plaque']
+# essais += ['labeled_statique_left_planche']
+# essais += ['labeled_statique_plaque']
+# essais += ['labeled_statique_centrefront_plaque']
 
 participant = []            #creation d une liste pour gerer les participants
 trial_name = []             #creation d une liste pour gerer les essais
@@ -1344,21 +1344,21 @@ F_point_left = []
 Pt_collecte_left= []
 Pt_ancrage_left= []
 
-M_autre = []
-Pt_autre= []
-F_totale_autre = []
-F_point_autre = []
-Pt_collecte_autre= []
-Pt_ancrage_autre= []
+# M_autre = []
+# Pt_autre= []
+# F_totale_autre = []
+# F_point_autre = []
+# Pt_collecte_autre= []
+# Pt_ancrage_autre= []
 
 #Raideurs#
 k=np.array(Solution[:12])
 print ('k = ' +str(k))
 
 #Masses#
-for i in range (0,Nb_essais_a_optimiser): # nombre essais centrefront
+for i in range (0,9): # nombre essais centrefront
     M_centrefront.append(np.array(Solution[12+405*i+5*i : 17+405*i+5*i]))
-for i in range (0,Nb_essais_a_optimiser):
+for i in range (0,9):
     print('M_centrefront_' + str(i) + ' = '+ str(M_centrefront[i]))
 
 for i in range (9,18): #nb essais statique : 9
@@ -1376,10 +1376,10 @@ for i in range (27,36): #nb essais left: 9
 for i in range(0, 9):
     print('M_left_' + str(i) + ' = ' + str(M_left[i]))
 
-for i in range (36,40): #nb essais autre: 4
-    M_autre += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
-for i in range(0, 9):
-    print('M_autre_' + str(i) + ' = ' + str(M_autre[i]))
+# for i in range (36,40): #nb essais autre: 4
+#     M_autre += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+# for i in range(0, 9):
+#     print('M_autre_' + str(i) + ' = ' + str(M_autre[i]))
 
 #Points#
 ###centrefront###
@@ -1435,17 +1435,17 @@ for i in range (27,36):
     Pt_collecte_left.append(np.array(Pt_collecte[i]))
     Pt_ancrage_left.append(np.array(Pt_ancrage[i]))
 ###autres###
-for i in range (36,40):
-    Pt_autre.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
-    F_totale_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
-    F_point_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
-
-    F_totale_autre[i] = cas.evalf(F_totale_autre[i])
-    F_point_autre[i] = cas.evalf(F_point_autre[i])
-    F_point_autre[i] = np.array(F_point_autre[i])
-
-    Pt_collecte_autre.append(np.array(Pt_collecte[i]))
-    Pt_ancrage_autre.append(np.array(Pt_ancrage[i]))
+# for i in range (36,40):
+#     Pt_autre.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
+#     F_totale_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
+#     F_point_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
+#
+#     F_totale_autre[i] = cas.evalf(F_totale_autre[i])
+#     F_point_autre[i] = cas.evalf(F_point_autre[i])
+#     F_point_autre[i] = np.array(F_point_autre[i])
+#
+#     Pt_collecte_autre.append(np.array(Pt_collecte[i]))
+#     Pt_ancrage_autre.append(np.array(Pt_ancrage[i]))
 
 end_main = time.time()
 print('**************************************************************************')
@@ -1525,21 +1525,21 @@ for i in range (0,9):
     ax.set_zlabel('z (m)')
 
 #AUTRE#
-fig = plt.figure()
-for i in range (0,9):
-    ax = plt.subplot(3,3,i+1, projection='3d')
-    ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(Pt_autre[i][:, 0], Pt_autre[i][:, 1], Pt_autre[i][:, 2], '.b', label = 'Points de la toile optimisés')
-    ax.plot(Pt_ancrage_autre[i][:, 0], Pt_ancrage_autre[i][:, 1], Pt_ancrage_autre[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
-    ax.plot(Pt_autre[i][ind_masse, 0], Pt_autre[i][ind_masse, 1], Pt_autre[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-    ax.plot(Pt_collecte_autre[i][0, :], Pt_collecte_autre[i][1, :], Pt_collecte_autre[i][2, :], 'xr', label = 'Points collecte')
-    label_masse = labels.index('t' + str(ind_masse))
-    ax.plot(Pt_collecte_autre[i][0, label_masse], Pt_collecte_autre[i][1, label_masse], Pt_collecte_autre[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
-    plt.legend()
-    plt.title('ESSAI' + str(trial_name[i+36]))
-    ax.set_xlabel('x (m)')
-    ax.set_ylabel('y (m)')
-    ax.set_zlabel('z (m)')
+# fig = plt.figure()
+# for i in range (0,9):
+#     ax = plt.subplot(3,3,i+1, projection='3d')
+#     ax.set_box_aspect([1.1, 1.8, 1])
+#     ax.plot(Pt_autre[i][:, 0], Pt_autre[i][:, 1], Pt_autre[i][:, 2], '.b', label = 'Points de la toile optimisés')
+#     ax.plot(Pt_ancrage_autre[i][:, 0], Pt_ancrage_autre[i][:, 1], Pt_ancrage_autre[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
+#     ax.plot(Pt_autre[i][ind_masse, 0], Pt_autre[i][ind_masse, 1], Pt_autre[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+#     ax.plot(Pt_collecte_autre[i][0, :], Pt_collecte_autre[i][1, :], Pt_collecte_autre[i][2, :], 'xr', label = 'Points collecte')
+#     label_masse = labels.index('t' + str(ind_masse))
+#     ax.plot(Pt_collecte_autre[i][0, label_masse], Pt_collecte_autre[i][1, label_masse], Pt_collecte_autre[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+#     plt.legend()
+#     plt.title('ESSAI' + str(trial_name[i+36]))
+#     ax.set_xlabel('x (m)')
+#     ax.set_ylabel('y (m)')
+#     ax.set_zlabel('z (m)')
 
 #calcul de l'erreur :
 #sur la position :
