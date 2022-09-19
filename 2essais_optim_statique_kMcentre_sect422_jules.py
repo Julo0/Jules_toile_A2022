@@ -26,6 +26,7 @@ from ezc3d import c3d
 from mpl_toolkits import mplot3d
 import time
 from scipy.interpolate import interp1d
+import pickle
 
 
 n = 15  # nombre de mailles sur le grand cote
@@ -762,7 +763,11 @@ def Resultat_PF_collecte(participant, vide_name, trial_name, frame) :
         for i in range(len(labels)):
             if '*' in labels[i]:
                 indices_supp = np.append(indices_supp, i)
-        ind_stop = int(indices_supp[0])
+
+        if len(indices_supp) == 0:
+            ind_stop = int(len(labels))
+        if len(indices_supp) != 0:
+            ind_stop = int(indices_supp[0])
 
         labels = c3d_experimental['parameters']['POINT']['LABELS']['value'][0:ind_stop]
         named_positions = c3d_experimental['data']['points'][0:3, 0:ind_stop, :]
@@ -1091,8 +1096,8 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         for i in range (len(w0_k)) :
             w0_k[i] = 1*w0_k[i]
 
-        lbw_k = [1e-3] * 12
-        ubw_k = [1e6] * 12  # bornes très larges
+        lbw_k = [1e-4] * 12
+        ubw_k = [1e7] * 12  # bornes très larges
 
         return w0_k, lbw_k, ubw_k
 
@@ -1110,8 +1115,8 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         M5 = masse_essai/5 #masse centre -15
 
         w0_m = [M1, M2, M3, M4, M5]
-        lbw_m += [0.7*masse_essai/5]*5
-        ubw_m += [1.3*masse_essai/5]*5
+        lbw_m += [0.5*masse_essai/5]*5
+        ubw_m += [1.5*masse_essai/5]*5
 
         return w0_m, lbw_m, ubw_m
 
@@ -1197,6 +1202,8 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
     F_totale_collecte = []
     Pt_collecte = []
     Pt_ancrage = []
+    ind_masse = []
+    labels = []
 
     obj = 0
     for i in range (len(essais)):
@@ -1208,10 +1215,10 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         Resultat_PF_collecte_total = Resultat_PF_collecte(participant[i],vide_name,trial_name[i],frame)
         F_totale_collecte.append(Resultat_PF_collecte_total[0])
         Pt_collecte.append(Resultat_PF_collecte_total[1])
-        labels = Resultat_PF_collecte_total[2]
-        ind_masse = Resultat_PF_collecte_total[3]
+        labels.append(Resultat_PF_collecte_total[2])
+        ind_masse.append(Resultat_PF_collecte_total[3])
 
-        dict_fixed_params = Param_fixe(ind_masse, Masse_centre[i])
+        dict_fixed_params = Param_fixe(ind_masse[i], Masse_centre[i])
         Pos_repos = Points_ancrage_repos(dict_fixed_params)[1]
         Pt_ancrage.append(Points_ancrage_repos(dict_fixed_params)[0])
 
@@ -1219,7 +1226,7 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         Ma = cas.MX.sym('Ma', 5)
         X = cas.MX.sym('X', 135*3)  # xyz pour chaque point (xyz_0, xyz_1, ...) puis Fxyz
         if initial_guess == 'interpolation' :
-            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte[i], Pt_ancrage[i], labels, F_totale_collecte)
+            lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_interp(Pt_collecte[i], Pt_ancrage[i], labels[i], F_totale_collecte)
         if initial_guess == 'repos' :
             lbw_Pt, ubw_Pt, w0_Pt = Pt_bounds_repos(Pos_repos, Masse_centre[i])
 
@@ -1242,20 +1249,20 @@ def Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initia
         ubg += [0]
 
         #en statique on ne fait pas de boucle sur le temps :
-        J = a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte[i], Pt_ancrage[i],dict_fixed_params,labels,min_energie, ind_masse)
+        J = a_minimiser(X, K, Ma, F_totale_collecte, Pt_collecte[i], Pt_ancrage[i],dict_fixed_params,labels[i],min_energie, ind_masse[i])
         obj += J(X,K,Ma)
 
 
     #Create an NLP solver
     prob = {'f': obj, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
-    opts = {"ipopt": {"max_iter" :30000, "linear_solver":"ma57"}}
+    opts = {"ipopt": {"max_iter" :300000, "linear_solver":"ma57"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
 
     # Solve the NLP
     sol = solver(x0=cas.vertcat(*w0), lbx=cas.vertcat(*lbw),ubx=cas.vertcat(*ubw), lbg=cas.vertcat(*lbg), ubg=cas.vertcat(*ubg))
     w_opt = sol['x'].full().flatten()
 
-    return w_opt, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params
+    return w_opt, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params, sol.get("f")
 
 ##########################################################################################################################
 
