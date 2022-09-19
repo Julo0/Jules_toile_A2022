@@ -1286,17 +1286,12 @@ for i in range (0,9) : #9 essais par zone
      essais += ['labeled_statique_leftfront_D' + str(nb_disques[i])]
 for i in range (0,9) : #9 essais par zone
      essais += ['labeled_statique_left_D' + str(nb_disques[i])]
-#autres essais#
-# essais += ['labeled_statique_leftfront_plaque']
-# essais += ['labeled_statique_left_planche']
-# essais += ['labeled_statique_plaque']
-# essais += ['labeled_statique_centrefront_plaque']
 
 participant = []            #creation d une liste pour gerer les participants
 trial_name = []             #creation d une liste pour gerer les essais
 Masse_centre = []           #creation d une liste pour gerer les masses
 
-for i in range (len(essais)):           #ici 40 essais
+for i in range (len(essais)):
     trial_name.append(essais[i])
     participant.append(participants[i-1])
     vide_name = 'labeled_statique_centrefront_vide'
@@ -1320,7 +1315,7 @@ print(vide_name)
 
 start_main = time.time()
 
-Solution, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params = Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initial_guess, min_energie)
+Solution, Pt_collecte, F_totale_collecte, ind_masse, labels, Pt_ancrage, dict_fixed_params, f = Optimisation(participant, Masse_centre, trial_name, vide_name, frame, initial_guess, min_energie)
 
 ####recuperation et affichage####
 M_centrefront = []
@@ -1351,12 +1346,6 @@ F_point_left = []
 Pt_collecte_left= []
 Pt_ancrage_left= []
 
-# M_autre = []
-# Pt_autre= []
-# F_totale_autre = []
-# F_point_autre = []
-# Pt_collecte_autre= []
-# Pt_ancrage_autre= []
 
 #Raideurs#
 k=np.array(Solution[:12])
@@ -1382,11 +1371,6 @@ for i in range (27,36): #nb essais left: 9
     M_left += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
 for i in range(0, 9):
     print('M_left_' + str(i) + ' = ' + str(M_left[i]))
-
-# for i in range (36,40): #nb essais autre: 4
-#     M_autre += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
-# for i in range(0, 9):
-#     print('M_autre_' + str(i) + ' = ' + str(M_autre[i]))
 
 #Points#
 ###centrefront###
@@ -1441,18 +1425,6 @@ for i in range (27,36):
 
     Pt_collecte_left.append(np.array(Pt_collecte[i]))
     Pt_ancrage_left.append(np.array(Pt_ancrage[i]))
-###autres###
-# for i in range (36,40):
-#     Pt_autre.append(np.reshape(Solution[17+405*i+5*i : 422+405*i+5*i],(135,3)))
-#     F_totale_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[0])
-#     F_point_autre.append(Calcul_Pt_F_verif(Solution[17+405*i+5*i:422+405*i+5*i], Pt_ancrage[i], dict_fixed_params, Solution[:12], ind_masse,Solution[12+405*i+5*i:17+405*i+5*i])[1])
-#
-#     F_totale_autre[i] = cas.evalf(F_totale_autre[i])
-#     F_point_autre[i] = cas.evalf(F_point_autre[i])
-#     F_point_autre[i] = np.array(F_point_autre[i])
-#
-#     Pt_collecte_autre.append(np.array(Pt_collecte[i]))
-#     Pt_ancrage_autre.append(np.array(Pt_ancrage[i]))
 
 end_main = time.time()
 print('**************************************************************************')
@@ -1468,12 +1440,12 @@ fig = plt.figure()
 for i in range (0,9):
     ax = plt.subplot(3,3,i+1, projection='3d')
     ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(Pt_centrefront[i][:, 0], Pt_centrefront[i][:, 1], Pt_centrefront[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_centrefront[i][:, 0], Pt_centrefront[i][:, 1], Pt_centrefront[i][:, 2], '+r', label = 'Points de la toile optimisés')
     ax.plot(Pt_ancrage_centrefront[i][:, 0], Pt_ancrage_centrefront[i][:, 1], Pt_ancrage_centrefront[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
-    ax.plot(Pt_centrefront[i][ind_masse, 0], Pt_centrefront[i][ind_masse, 1], Pt_centrefront[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-    ax.plot(Pt_collecte_centrefront[i][0, :], Pt_collecte_centrefront[i][1, :], Pt_collecte_centrefront[i][2, :], 'xr', label = 'Points collecte')
+    ax.plot(Pt_centrefront[i][ind_masse, 0], Pt_centrefront[i][ind_masse, 1], Pt_centrefront[i][ind_masse, 2], '+y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_centrefront[i][0, :], Pt_collecte_centrefront[i][1, :], Pt_collecte_centrefront[i][2, :], '.b', label = 'Points collecte')
     label_masse = labels.index('t' + str(ind_masse))
-    ax.plot(Pt_collecte_centrefront[i][0, label_masse], Pt_collecte_centrefront[i][1, label_masse], Pt_collecte_centrefront[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    ax.plot(Pt_collecte_centrefront[i][0, label_masse], Pt_collecte_centrefront[i][1, label_masse], Pt_collecte_centrefront[i][2, label_masse], 'og', label = 'Point collecte le plus bas ' + labels[label_masse])
     plt.legend()
     plt.title('ESSAI' + str(trial_name[i]))
     ax.set_xlabel('x (m)')
@@ -1485,12 +1457,12 @@ fig = plt.figure()
 for i in range (0,9):
     ax = plt.subplot(3,3,i+1, projection='3d')
     ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(Pt_statique[i][:, 0], Pt_statique[i][:, 1], Pt_statique[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_statique[i][:, 0], Pt_statique[i][:, 1], Pt_statique[i][:, 2], '+r', label = 'Points de la toile optimisés')
     ax.plot(Pt_ancrage_statique[i][:, 0], Pt_ancrage_statique[i][:, 1], Pt_ancrage_statique[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
-    ax.plot(Pt_statique[i][ind_masse, 0], Pt_statique[i][ind_masse, 1], Pt_statique[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-    ax.plot(Pt_collecte_statique[i][0, :], Pt_collecte_statique[i][1, :], Pt_collecte_statique[i][2, :], 'xr', label = 'Points collecte')
+    ax.plot(Pt_statique[i][ind_masse, 0], Pt_statique[i][ind_masse, 1], Pt_statique[i][ind_masse, 2], '+y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_statique[i][0, :], Pt_collecte_statique[i][1, :], Pt_collecte_statique[i][2, :], '.b', label = 'Points collecte')
     label_masse = labels.index('t' + str(ind_masse))
-    ax.plot(Pt_collecte_statique[i][0, label_masse], Pt_collecte_statique[i][1, label_masse], Pt_collecte_statique[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    ax.plot(Pt_collecte_statique[i][0, label_masse], Pt_collecte_statique[i][1, label_masse], Pt_collecte_statique[i][2, label_masse], 'og', label = 'Point collecte le plus bas ' + labels[label_masse])
     plt.legend()
     plt.title('ESSAI' + str(trial_name[i+9]))
     ax.set_xlabel('x (m)')
@@ -1502,12 +1474,12 @@ fig = plt.figure()
 for i in range (0,9):
     ax = plt.subplot(3,3,i+1, projection='3d')
     ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(Pt_leftfront[i][:, 0], Pt_leftfront[i][:, 1], Pt_leftfront[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_leftfront[i][:, 0], Pt_leftfront[i][:, 1], Pt_leftfront[i][:, 2], '+r', label = 'Points de la toile optimisés')
     ax.plot(Pt_ancrage_leftfront[i][:, 0], Pt_ancrage_leftfront[i][:, 1], Pt_ancrage_leftfront[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
-    ax.plot(Pt_leftfront[i][ind_masse, 0], Pt_leftfront[i][ind_masse, 1], Pt_leftfront[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-    ax.plot(Pt_collecte_leftfront[i][0, :], Pt_collecte_leftfront[i][1, :], Pt_collecte_leftfront[i][2, :], 'xr', label = 'Points collecte')
+    ax.plot(Pt_leftfront[i][ind_masse, 0], Pt_leftfront[i][ind_masse, 1], Pt_leftfront[i][ind_masse, 2], '+y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_leftfront[i][0, :], Pt_collecte_leftfront[i][1, :], Pt_collecte_leftfront[i][2, :], '.b', label = 'Points collecte')
     label_masse = labels.index('t' + str(ind_masse))
-    ax.plot(Pt_collecte_leftfront[i][0, label_masse], Pt_collecte_leftfront[i][1, label_masse], Pt_collecte_leftfront[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    ax.plot(Pt_collecte_leftfront[i][0, label_masse], Pt_collecte_leftfront[i][1, label_masse], Pt_collecte_leftfront[i][2, label_masse], 'og', label = 'Point collecte le plus bas ' + labels[label_masse])
     plt.legend()
     plt.title('ESSAI' + str(trial_name[i+18]))
     ax.set_xlabel('x (m)')
@@ -1519,34 +1491,17 @@ fig = plt.figure()
 for i in range (0,9):
     ax = plt.subplot(3,3,i+1, projection='3d')
     ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(Pt_left[i][:, 0], Pt_left[i][:, 1], Pt_left[i][:, 2], '.b', label = 'Points de la toile optimisés')
+    ax.plot(Pt_left[i][:, 0], Pt_left[i][:, 1], Pt_left[i][:, 2], '+r', label = 'Points de la toile optimisés')
     ax.plot(Pt_ancrage_left[i][:, 0], Pt_ancrage_left[i][:, 1], Pt_ancrage_left[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
-    ax.plot(Pt_left[i][ind_masse, 0], Pt_left[i][ind_masse, 1], Pt_left[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-    ax.plot(Pt_collecte_left[i][0, :], Pt_collecte_left[i][1, :], Pt_collecte_left[i][2, :], 'xr', label = 'Points collecte')
+    ax.plot(Pt_left[i][ind_masse, 0], Pt_left[i][ind_masse, 1], Pt_left[i][ind_masse, 2], '+y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
+    ax.plot(Pt_collecte_left[i][0, :], Pt_collecte_left[i][1, :], Pt_collecte_left[i][2, :], '.b', label = 'Points collecte')
     label_masse = labels.index('t' + str(ind_masse))
-    ax.plot(Pt_collecte_left[i][0, label_masse], Pt_collecte_left[i][1, label_masse], Pt_collecte_left[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
+    ax.plot(Pt_collecte_left[i][0, label_masse], Pt_collecte_left[i][1, label_masse], Pt_collecte_left[i][2, label_masse], 'og', label = 'Point collecte le plus bas ' + labels[label_masse])
     plt.legend()
     plt.title('ESSAI' + str(trial_name[i+27]))
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
     ax.set_zlabel('z (m)')
-
-#AUTRE#
-# fig = plt.figure()
-# for i in range (0,9):
-#     ax = plt.subplot(3,3,i+1, projection='3d')
-#     ax.set_box_aspect([1.1, 1.8, 1])
-#     ax.plot(Pt_autre[i][:, 0], Pt_autre[i][:, 1], Pt_autre[i][:, 2], '.b', label = 'Points de la toile optimisés')
-#     ax.plot(Pt_ancrage_autre[i][:, 0], Pt_ancrage_autre[i][:, 1], Pt_ancrage_autre[i][:, 2], '.k', label = 'Points d\'ancrage simulés')
-#     ax.plot(Pt_autre[i][ind_masse, 0], Pt_autre[i][ind_masse, 1], Pt_autre[i][ind_masse, 2], '.y', label='Point optimisés le plus bas d\'indice ' + str(ind_masse))
-#     ax.plot(Pt_collecte_autre[i][0, :], Pt_collecte_autre[i][1, :], Pt_collecte_autre[i][2, :], 'xr', label = 'Points collecte')
-#     label_masse = labels.index('t' + str(ind_masse))
-#     ax.plot(Pt_collecte_autre[i][0, label_masse], Pt_collecte_autre[i][1, label_masse], Pt_collecte_autre[i][2, label_masse], 'xm', label = 'Point collecte le plus bas ' + labels[label_masse])
-#     plt.legend()
-#     plt.title('ESSAI' + str(trial_name[i+36]))
-#     ax.set_xlabel('x (m)')
-#     ax.set_ylabel('y (m)')
-#     ax.set_zlabel('z (m)')
 
 #calcul de l'erreur :
 #sur la position :
@@ -1566,5 +1521,16 @@ for i in range (0,9):
 #
 # print('Erreur sur la position : ' +str(erreur_position) + ' m')
 # print('Erreur sur la force : ' +str(erreur_force) + ' N')
+
+#ENREGISTREMENT PICKLE#
+path = 'results/result_multi_essais/' + 'multi_essais_test' + '.pkl'
+with open(path, 'wb') as file:
+    pickle.dump(k, file)
+    pickle.dump(Solution, file) #contient aussi les k mais la ligne au dessus permet de les retrouver plus vite
+    pickle.dump(labels, file)
+    pickle.dump(Pt_collecte, file)
+    pickle.dump(Pt_ancrage, file)
+    pickle.dump(ind_masse, file)
+    pickle.dump(f, file)
 
 plt.show() #on affiche tous les graphes
