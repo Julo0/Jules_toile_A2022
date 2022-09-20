@@ -1358,17 +1358,17 @@ for i in range (0,9):
     print('M_centrefront_' + str(i) + ' = '+ str(M_centrefront[i]))
 
 for i in range (9,18): #nb essais statique : 9
-    M_statique += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+    M_statique.append(np.array(Solution[12+405*i+5*i : 17+405*i+5*i]))
 for i in range(0, 9):
     print('M_statique_' + str(i) + ' = ' + str(M_statique[i]))
 
 for i in range (18,27): #nb essais leftfront: 9
-    M_leftfront += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+    M_leftfront.append(np.array(Solution[12+405*i+5*i : 17+405*i+5*i]))
 for i in range(0, 9):
     print('M_leftfront_' + str(i) + ' = ' + str(M_leftfront[i]))
 
 for i in range (27,36): #nb essais left: 9
-    M_left += np.array(Solution[12+405*i+5*i : 17+405*i+5*i])
+    M_left.append(np.array(Solution[12+405*i+5*i : 17+405*i+5*i]))
 for i in range(0, 9):
     print('M_left_' + str(i) + ' = ' + str(M_left[i]))
 
