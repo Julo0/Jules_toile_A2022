@@ -25,6 +25,7 @@ import matplotlib.animation as animation
 import mpl_toolkits.mplot3d.axes3d as p3
 import seaborn as sns
 from scipy import signal
+import pickle
 
 n = 15  # nombre de mailles sur le grand cote
 m = 9  # nombre de mailles sur le petit cote
@@ -263,12 +264,12 @@ def Points_ancrage_fix(dict_fixed_params):
 
     Pos_repos_new, Pt_ancrage = rotation_points(Pos_repos_new,Pt_ancrage)
 
-    fig = plt.figure(0)
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(Pos_repos_new[:,0], Pos_repos_new[:,1], Pos_repos_new[:,2], 'ob')
-    ax.plot(Pt_ancrage[:, 0], Pt_ancrage[:, 1], Pt_ancrage[:, 2], 'ok')
-    ax.plot(0, 0, -1.2, 'ow')
+    # fig = plt.figure(0)
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.set_box_aspect([1.1, 1.8, 1])
+    # ax.plot(Pos_repos_new[:,0], Pos_repos_new[:,1], Pos_repos_new[:,2], 'ob')
+    # ax.plot(Pt_ancrage[:, 0], Pt_ancrage[:, 1], Pt_ancrage[:, 2], 'ok')
+    # ax.plot(0, 0, -1.2, 'ow')
 
     # bout1, bout2, boutc1, boutc2 = Bouts_ressorts_repos(Pt_ancrage,Pos_repos_new)
     #
@@ -361,7 +362,7 @@ def Points_ancrage_repos(dict_fixed_params):
     Pt_ancrage[2 * n + m + 7, :] = np.array([0, -L_bas, 0]) + np.array([np.sum(dl[2:5]), 0, 0])
     Pt_ancrage[2 * n + m + 8, :] = np.array([0, -L_bas, 0]) + np.array([np.sum(dl[1:5]), 0, 0])
 
-    Pt_ancrage,Pos_repos_new = rotation_points(Pos_repos_new,Pt_ancrage)
+    Pos_repos_new, Pt_ancrage = rotation_points(Pos_repos_new,Pt_ancrage)
 
     Pt_ancrage_cas = cas.DM(Pt_ancrage)
     Pos_repos_cas = cas.DM(Pos_repos)
@@ -505,9 +506,9 @@ def Param_variable_force(F):
     F_tab = cas.MX.zeros(5,3)
     F_tab[0, :] = F[:3]
     F_tab[1, :] = F[3:6]
-    F_tab[1, :] = F[6:9]
-    F_tab[1, :] = F[9:12]
-    F_tab[1, :] = F[12:15]
+    F_tab[2, :] = F[6:9]
+    F_tab[3, :] = F[9:12]
+    F_tab[4, :] = F[12:15]
     return F_tab
 
 def Spring_bouts(Pt, Pt_ancrage): #sx
@@ -750,11 +751,11 @@ def Force_totale_points(X, Xdot, C, F, Masse_centre, ind_masse):
     F_point = Force_point(F_spring, F_spring_croix, F_masses,  F_amortissement)
 
     # ajout des forces de l'athlete
-    F_point[ind_masse, :] = F[0, :]
-    F_point[ind_masse + 1, :] = F[1, :]
-    F_point[ind_masse - 1, :] = F[2, :]
-    F_point[ind_masse + 15, :] = F[3, :]
-    F_point[ind_masse - 15, :] = F[4, :]
+    F_point[ind_masse, :] -= F[0, :]
+    F_point[ind_masse + 1, :] -= F[1, :]
+    F_point[ind_masse - 1, :] -= F[2, :]
+    F_point[ind_masse + 15, :] -= F[3, :]
+    F_point[ind_masse - 15, :] -= F[4, :]
 
     F_tot = cas.MX.zeros((1, 3))
     for point in range (n*m):
@@ -814,7 +815,7 @@ def list2tab (list) :
             tab[ind, i] = list[i + 3 * ind]
     return tab
 
-def interpolation_collecte(Pt_collecte, labels) :
+def interpolation_collecte_nan(Pt_collecte, labels) :
     """
     Interpoler lespoints manquants de la collecte pour les utiliser dans l'initial guess
     :param Pt_collecte: DM(3,135)
@@ -830,6 +831,58 @@ def interpolation_collecte(Pt_collecte, labels) :
 
     return Pt_interpole
 
+def interpolation_collecte(Pt_collecte, Pt_ancrage, labels) :
+    """
+    Interpoler lespoints manquants de la collecte pour les utiliser dans l'initial guess
+    :param Pt_collecte: DM(3,135)
+    :param labels: list(nombre de labels)
+    :return: Pt_interpole: DM(3,135) (même dimension que Pos_repos)
+    """
+    #liste avec les bons points aux bons endroits, et le reste vaut 0
+
+    Pt_interpole = cas.DM.zeros((3,135))
+    for ind in range (135) :
+        if 't' + str(ind) in labels and np.isnan(Pt_collecte[0, labels.index('t' + str(ind))])==False :
+            Pt_interpole[:,ind] = Pt_collecte[:, labels.index('t' + str(ind))]
+
+    #séparation des colonnes
+    Pt_colonnes = []
+    for i in range (9) :
+        Pt_colonnei = np.zeros((3,17))
+        Pt_colonnei[:,0] = Pt_ancrage[2*(n+m) - 1 - i, :]
+        Pt_colonnei[:,1:16] = Pt_interpole[:, 15*i:15*(i+1)]
+        Pt_colonnei[:,-1] = Pt_ancrage[n + i, :]
+        Pt_colonnes+= [Pt_colonnei]
+
+    #interpolation des points de chaque colonne
+    Pt_inter_liste=[]
+    for colonne in range (9) :
+        for ind in range (17) :
+            if Pt_colonnes[colonne][0,ind] == 0 :
+                gauche = Pt_colonnes[colonne][:,ind-1]
+                j=1
+                while Pt_colonnes[colonne][0,ind+j] == 0 :
+                    j+=1
+                droite= Pt_colonnes[colonne][:,ind+j]
+                Pt_colonnes[colonne][:, ind] = gauche + (droite-gauche)/(j+1)
+        Pt_colonne_ind = Pt_colonnes[colonne][:, 1:16]
+        Pt_inter_liste += [Pt_colonnes[colonne][:, 1:16]]
+
+    #on recolle les colonnes interpolées
+    Pt_inter = []
+    for i in range (9) :
+        Pt_inter = cas.horzcat(Pt_inter, Pt_inter_liste[i])
+
+    fig = plt.figure(1)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_box_aspect([1.1, 1.8, 1])
+    ax.plot(np.array((Pt_inter))[0, :], np.array((Pt_inter))[1, :], np.array((Pt_inter))[2, :], '.b')
+    plt.show()
+
+    Pt_inter = np.array((Pt_inter))
+
+    return Pt_inter
+
 def Vit_initial(Ptavant, Ptapres, labels):
     """
     :param Pt intervalle dynamique
@@ -838,8 +891,8 @@ def Vit_initial(Ptavant, Ptapres, labels):
     vitesse initiale a l'instant -1, de la frame 0 de l'intervalle dynamique
     """
 
-    position_imoins1 = interpolation_collecte(Ptavant, labels)
-    position_iplus1 = interpolation_collecte(Ptapres, labels)
+    position_imoins1 = interpolation_collecte_nan(Ptavant, labels)
+    position_iplus1 = interpolation_collecte_nan(Ptapres, labels)
     distance_xyz = np.abs(position_imoins1 - position_iplus1)
     vitesse_initiale = distance_xyz / (2 * 0.002)
 
@@ -881,11 +934,11 @@ def Integration(X, Xdot, F, C, Masse_centre, ind_masse):
     F_amortissement = Force_amortissement(Vitesse, C)
     F_point = Force_point(F_spring, F_spring_croix, F_masses, F_amortissement)
     # ajout des forces de l'athlete
-    F_point[ind_masse, :] = F[0, :]
-    F_point[ind_masse + 1, :] = F[1, :]
-    F_point[ind_masse - 1, :] = F[2, :]
-    F_point[ind_masse + 15, :] = F[3, :]
-    F_point[ind_masse - 15, :] = F[4, :]
+    F_point[ind_masse, :] -= F[0, :]
+    F_point[ind_masse + 1, :] -= F[1, :]
+    F_point[ind_masse - 1, :] -= F[2, :]
+    F_point[ind_masse + 15, :] -= F[3, :]
+    F_point[ind_masse - 15, :] -= F[4, :]
 
     for i in range(0, n * m):
         # acceleration
@@ -959,7 +1012,7 @@ def Acceleration_cadre(Pt, total_frame):
     ax[1,2].set_ylabel('Force cadre Z (N)')
 
     fig.legend(shadow=True)
-    # plt.show()
+    plt.show()
 
     return np.array(( fx, fy, fz))
 
@@ -1290,14 +1343,14 @@ def Optimisation() :  # main
         :return: bounds et init de C
         """
 
-        C = [0.2]*Uk_C.shape[0]
+        C = [10]*Uk_C.shape[0]
         w0_C = C
         lbw_C = [1e-3]*Uk_C.shape[0]
         ubw_C = [1e+3]*Uk_C.shape[0]
 
         return  lbw_C, ubw_C, w0_C
 
-    def Pt_bounds(x,Pos) : #bounds and initial guess
+    def Pt_bounds(x ,Pt_collecte, Pt_ancrage, labels) : #bounds and initial guess
         """
         :param x:
         :param Pos:
@@ -1307,19 +1360,29 @@ def Optimisation() :  # main
         ubw_Pt = []
         w0_Pt = []
 
-        for k in range (x.shape[0]) :
-            if k % 3 == 0 :#limites et guess en x
-                lbw_Pt +=[Pos[int(k//3),0] - 0.3]
-                ubw_Pt += [Pos[int(k // 3), 0] + 0.3]
-                w0_Pt += [Pos[int(k // 3), 0]]
-            if k % 3 == 1: #limites et guess en y
-                lbw_Pt += [Pos[int(k // 3), 1] - 0.3]
-                ubw_Pt += [Pos[int(k // 3), 1] + 0.3]
-                w0_Pt += [Pos[int(k // 3), 1]]
-            if k % 3 == 2: #limites et guess en z
+        Pt_inter = interpolation_collecte(Pt_collecte, Pt_ancrage, labels)
+
+        for k in range(405):
+            if k % 3 == 0:  # limites et guess en x
+                lbw_Pt += [Pt_inter[0, int(k // 3)] - 0.3]
+                ubw_Pt += [Pt_inter[0, int(k // 3)] + 0.3]
+                w0_Pt += [Pt_inter[0, int(k // 3)]]
+            if k % 3 == 1:  # limites et guess en y
+                lbw_Pt += [Pt_inter[1, int(k // 3)] - 0.3]
+                ubw_Pt += [Pt_inter[1, int(k // 3)] + 0.3]
+                w0_Pt += [Pt_inter[1, int(k // 3)]]
+            if k % 3 == 2:  # limites et guess en z
                 lbw_Pt += [-2]
                 ubw_Pt += [0.5]
-                w0_Pt += [Pos[int(k // 3), 2]]
+                w0_Pt += [Pt_inter[2, int(k // 3)]]
+
+
+        pt_trace = np.array(Pt_inter)
+        fig = plt.figure(1)
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_box_aspect([1.1, 1.8, 1])
+        ax.plot(pt_trace[0, :], pt_trace[1, :], pt_trace[2, :], '.b')
+        plt.show()
 
         return lbw_Pt, ubw_Pt, w0_Pt
 
@@ -1333,16 +1396,16 @@ def Optimisation() :  # main
         lbw_v = [-30]*405
         ubw_v = [30]*405
 
-        position_imoins1 = interpolation_collecte(Ptavant, labels)
-        position_iplus1 = interpolation_collecte(Ptapres, labels)
+        position_imoins1 = interpolation_collecte_nan(Ptavant, labels)
+        position_iplus1 = interpolation_collecte_nan(Ptapres, labels)
         distance_xyz = np.abs(position_imoins1 - position_iplus1)
         vitesse_initiale = distance_xyz / (2 * 0.002)
         vitesse_initiale = vitesse_initiale.T
 
-        # w0_v = []
-        # for i in range(135):
-        #     for j in range(3):
-        #         w0_v.append(vitesse_initiale[i, j])
+        w0_v = []
+        for i in range(135):
+            for j in range(3):
+                w0_v.append(vitesse_initiale[i, j])
 
         w0_v = [1]*405
 
@@ -1351,10 +1414,19 @@ def Optimisation() :  # main
     def Force_bounds():
         """
         :return: bounds et init pour la force de l'athlete sur la toile
+        on limite la force sur x et y
         """
-        lbw_F = [1e-5]* 15
-        ubw_F = [1e5] * 15
-        w0_F = [1000]* 15
+        ubw_F = [1e5]*15
+        ubw_F[::3] = [1e3]*5
+        ubw_F[1::3] = [1e3]*5
+
+        lbw_F = [-1e5]* 15
+        lbw_F[::3] = [-1e3] * 5
+        lbw_F[1::3] = [-1e3] * 5
+
+        w0_F = [15000]*15
+        w0_F[::3] = [500]*5
+        w0_F[1::3] = [500]*5
 
         return lbw_F, ubw_F, w0_F
 
@@ -1409,7 +1481,7 @@ def Optimisation() :  # main
 
     # -- choix de l'intervalle de frame
     total_frame = 7763
-    intervalle_dyna = [5100, 5105]
+    intervalle_dyna = [5170, 5173]
     nb_frame = intervalle_dyna[1] - intervalle_dyna[0]
 
     # -- définition des parametres fixes
@@ -1429,10 +1501,10 @@ def Optimisation() :  # main
     Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
 
 
-    # -- Recuperation des donnees de la collecte, pour chaque frame de l'intervalle
+    # -- Recuperation des donnees de la collecte, pour chaque frame de l'intervalle [k, p]
     F_totale_collecte, Pt_collecte_tab, labels, ind_masse = Resultat_PF_collecte(participant, statique_name, vide_name, trial_name, intervalle_dyna)
 
-    # -- on recupere les points d'ancrage, sur l'intervalle dynamique
+    # -- on recupere les points d'ancrage, sur l'intervalle dynamique [k, p]
     Pt_ancrage_collecte, label_ancrage = Point_ancrage(Pt_collecte_tab, labels)
     # accélération frame, de la taille dependant de l'intervalle dynamique et dépendant des points d'ancrage collectés
     force_acceleration_cadre = Acceleration_cadre(Pt_ancrage_collecte, total_frame).T
@@ -1465,7 +1537,7 @@ def Optimisation() :  # main
     Xdot_sym = cas.MX.sym('Xdot_0', 135 * 3)
     F_sym = cas.MX.sym('force_0', 5 * 3)
 
-    lbw_X, ubw_X, w0_X = Pt_bounds(X_sym, Pos_repos)
+    lbw_X, ubw_X, w0_X = Pt_bounds(X_sym, Pt_collecte_tab[1] , Pt_ancrage, labels)
     lbw_Xdot, ubw_Xdot, w0_Xdot = Vitesse_bounds(Pt_collecte_tab[0], Pt_collecte_tab[2])
     lbw_F, ubw_F, w0_F = Force_bounds()
 
@@ -1486,27 +1558,27 @@ def Optimisation() :  # main
     w0 += w0_F
 
     # -- on boucle sur le nombre de frame apres avoir géré la frame initiale
-    for frame in range(0, nb_frame - 2):
+    for frame in range(1, nb_frame-1): #[k+1,p-1]
         # -- Récupérer forces des plateformes
-        Force_plateforme_frame = F_totale_collecte[frame, :]
-        Pt_collecte = Pt_collecte_tab[frame]
+        Force_plateforme_frame = F_totale_collecte[frame, :] # force plateforme instant i
+        Pt_collecte = Pt_collecte_tab[frame] # pt collecte instant i
 
         # -- Recuperation force acceleration cadre
-        force_accel_cadre = force_acceleration_cadre[frame]
+        force_accel_cadre = force_acceleration_cadre[frame-1] # force accel instant i, car par la meme taille que les autres array
 
-        # -- on gere l'objectif
+        # -- on gere l'objectif a l'instant i
         J = A_minimiser(X_sym, Xdot_sym, C_sym, F_sym, Masse_centre, Pt_collecte, Force_plateforme_frame, force_accel_cadre, labels, ind_masse)
         objectif += J(X_sym, Xdot_sym, C_sym, F_sym)
 
-        # -- on integre a partir du frame d'avant
+        # -- on integre a partir du frame i
         Pt_integres, V_integrees = Integration(X_sym, Xdot_sym, F_sym, C_sym, Masse_centre, ind_masse)
 
-        # -- definition des nouvelles variables symboliques a l'instant i
+        # -- definition des nouvelles variables symboliques a l'instant i+1
         X_sym = cas.MX.sym(f'X_{frame}', 135 * 3)
         Xdot_sym = cas.MX.sym(f'Xdot_{frame}', 135 * 3)
         F_sym = cas.MX.sym(f'force_{frame}', 5 * 3)
 
-        lbw_X, ubw_X, w0_X = Pt_bounds(X_sym, Pos_repos)
+        lbw_X, ubw_X, w0_X = Pt_bounds(X_sym, Pt_collecte_tab[frame+1], Pt_ancrage, labels)
         lbw_Xdot, ubw_Xdot, w0_Xdot = Vitesse_bounds(Pt_collecte_tab[frame-1], Pt_collecte_tab[frame+1])
         lbw_F, ubw_F, w0_F, = Force_bounds()
 
@@ -1526,19 +1598,19 @@ def Optimisation() :  # main
         w0 += w0_Xdot
         w0 += w0_F
 
-        # -- Contrainte de continuité en tout les points entre la frame i-1 et la frame i (position ET vitesse)
+        # -- Contrainte de continuité en tout les points entre la frame i et la frame i+1 (position ET vitesse)
         for i in range(n*m): # attention aux nan tous les points nexistent pas
             for j in range(3):
                 g += [Pt_integres[i,j] - X_sym[j::3][i]]
                 g += [V_integrees[i,j] - Xdot_sym[j::3][i]]
-        lbg += [0] * (135 * 3 * 2)
-        ubg += [0] * (135 * 3 * 2)
+        lbg += [-0.01] * (135 * 3 * 2)
+        ubg += [0.01] * (135 * 3 * 2)
 
 
     # -- Creation du solver
     prob = {'f': objectif, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
     # opts={"ipopt" : {"linear_solver" : "ma57", "tol" : 1e-4, "constr_viol_tol" : 1e-4, "constr_inf_tol" : 1e-4, "hessian_approximation" : "limited-memory"}}
-    opts = {"ipopt": {"max_iter" :100000, "linear_solver": "ma57", "tol": 1e-4, "hessian_approximation" : "limited-memory"}}
+    opts = {"ipopt": {"max_iter" :100000, "linear_solver": "ma57"}} #, "tol": 1e-4, "hessian_approximation" : "limited-memory"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
 
     # -- Resolution
@@ -1546,6 +1618,12 @@ def Optimisation() :  # main
     sol = solver(x0=cas.vertcat(*w0), lbg=cas.vertcat(*lbg), ubg=cas.vertcat(*ubg), lbx=cas.vertcat(*lbw), ubx=cas.vertcat(*ubw))
     w_opt = sol['x'].full().flatten()
 
+    # path ='/home/lim/Documents/Jules/dynamique/results/test_restor2.pkl'
+    # with open(path, 'wb') as file:
+    #     pickle.dump(sol, file)
+    #     pickle.dump(w0, file)
+    #     pickle.dump(ubw, file)
+    #     pickle.dump(lbw, file)
 
     return w_opt
 
