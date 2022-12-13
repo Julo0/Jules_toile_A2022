@@ -873,11 +873,11 @@ def interpolation_collecte(Pt_collecte, Pt_ancrage, labels) :
     for i in range (9) :
         Pt_inter = cas.horzcat(Pt_inter, Pt_inter_liste[i])
 
-    fig = plt.figure(1)
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_box_aspect([1.1, 1.8, 1])
-    ax.plot(np.array((Pt_inter))[0, :], np.array((Pt_inter))[1, :], np.array((Pt_inter))[2, :], '.b')
-    plt.show()
+    # fig = plt.figure(1)
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.set_box_aspect([1.1, 1.8, 1])
+    # ax.plot(np.array((Pt_inter))[0, :], np.array((Pt_inter))[1, :], np.array((Pt_inter))[2, :], '.b')
+    # plt.show()
 
     Pt_inter = np.array((Pt_inter))
 
@@ -1377,12 +1377,12 @@ def Optimisation() :  # main
                 w0_Pt += [Pt_inter[2, int(k // 3)]]
 
 
-        pt_trace = np.array(Pt_inter)
-        fig = plt.figure(1)
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_box_aspect([1.1, 1.8, 1])
-        ax.plot(pt_trace[0, :], pt_trace[1, :], pt_trace[2, :], '.b')
-        plt.show()
+        # pt_trace = np.array(Pt_inter)
+        # fig = plt.figure(1)
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.set_box_aspect([1.1, 1.8, 1])
+        # ax.plot(pt_trace[0, :], pt_trace[1, :], pt_trace[2, :], '.b')
+        # plt.show()
 
         return lbw_Pt, ubw_Pt, w0_Pt
 
@@ -1424,7 +1424,7 @@ def Optimisation() :  # main
         lbw_F[::3] = [-1e3] * 5
         lbw_F[1::3] = [-1e3] * 5
 
-        w0_F = [15000]*15
+        w0_F = [5000]*15
         w0_F[::3] = [500]*5
         w0_F[1::3] = [500]*5
 
