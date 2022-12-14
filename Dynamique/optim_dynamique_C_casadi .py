@@ -1424,7 +1424,7 @@ def Optimisation() :  # main
         lbw_F[::3] = [-1e3] * 5
         lbw_F[1::3] = [-1e3] * 5
 
-        w0_F = [5000]*15
+        w0_F = [1200]*15
         w0_F[::3] = [500]*5
         w0_F[1::3] = [500]*5
 
@@ -1449,6 +1449,8 @@ def Optimisation() :  # main
                     ind_collecte = labels.index('t' + str(ind))
                     if np.isnan(Pt_collecte[i, ind_collecte]):
                         do = 'on fait rien sur les nan car pas dinterpolation'
+                    elif ind==ind_masse or ind==ind_masse-1 or ind==ind_masse+1 or ind==ind_masse-15 or ind==ind_masse+15 :
+                        Difference += 500*(Pt[ind, i] - Pt_collecte[i, ind_collecte]) ** 2
                     else:
                         Difference += (Pt[ind, i] - Pt_collecte[i, ind_collecte]) ** 2
 
@@ -1603,8 +1605,8 @@ def Optimisation() :  # main
             for j in range(3):
                 g += [Pt_integres[i,j] - X_sym[j::3][i]]
                 g += [V_integrees[i,j] - Xdot_sym[j::3][i]]
-        lbg += [-0.01] * (135 * 3 * 2)
-        ubg += [0.01] * (135 * 3 * 2)
+        lbg += [0] * (135 * 3 * 2)
+        ubg += [0] * (135 * 3 * 2)
 
 
     # -- Creation du solver
@@ -1618,12 +1620,16 @@ def Optimisation() :  # main
     sol = solver(x0=cas.vertcat(*w0), lbg=cas.vertcat(*lbg), ubg=cas.vertcat(*ubg), lbx=cas.vertcat(*lbw), ubx=cas.vertcat(*ubw))
     w_opt = sol['x'].full().flatten()
 
-    # path ='/home/lim/Documents/Jules/dynamique/results/test_restor2.pkl'
-    # with open(path, 'wb') as file:
-    #     pickle.dump(sol, file)
-    #     pickle.dump(w0, file)
-    #     pickle.dump(ubw, file)
-    #     pickle.dump(lbw, file)
+    path ='/home/lim/Documents/Jules/dynamique/results/optimC_4.pkl'
+    with open(path, 'wb') as file:
+        pickle.dump(sol, file)
+        pickle.dump(w0, file)
+        pickle.dump(ubw, file)
+        pickle.dump(lbw, file)
+        pickle.dump(labels, file)
+        pickle.dump(Pt_collecte_tab, file)
+        pickle.dump(F_totale_collecte, file)
+        pickle.dump(sol['f'], file)
 
     return w_opt
 
