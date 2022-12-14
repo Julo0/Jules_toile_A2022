@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pickle
 from ezc3d import c3d
 from scipy import signal
+import casadi as cas
 
 n = 15  # nombre de mailles sur le grand cote
 m = 9  # nombre de mailles sur le petit cote
@@ -339,19 +340,7 @@ def Points_ancrage_repos(dict_fixed_params):
     Pt_ancrage[2 * n + m + 7, :] = np.array([0, -L_bas, 0]) + np.array([np.sum(dl[2:5]), 0, 0])
     Pt_ancrage[2 * n + m + 8, :] = np.array([0, -L_bas, 0]) + np.array([np.sum(dl[1:5]), 0, 0])
 
-    Pt_ancrage, Pos_repos_new = rotation_points(Pos_repos_new,Pt_ancrage)
-
-    # Pt_ancrage_cas = cas.DM(Pt_ancrage)
-    # Pos_repos_cas = cas.DM(Pos_repos)
-
-    # fig = plt.figure(0)
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.set_box_aspect([1.1, 1.8, 1])
-    # ax.plot(0, 0, -1.2, 'ow')
-    #
-    # ax.plot(Pt_ancrage[:,0], Pt_ancrage[:,1], Pt_ancrage[:,2], 'ok')
-    # ax.plot(Pos_repos_new[:, 0], Pos_repos_new[:, 1], Pos_repos_new[:, 2], 'ob')
-    # plt.show()
+    Pos_repos_new, Pt_ancrage = rotation_points(Pos_repos_new,Pt_ancrage)
 
     return Pt_ancrage, Pos_repos_new
 
@@ -812,6 +801,58 @@ def interpolation_collecte(Pt_collecte, labels) :
             Pt_interpole[:,ind] = Pt_collecte[:, labels.index('t' + str(ind))]
 
     return Pt_interpole
+
+def interpolation_collecte_lineaire(Pt_collecte, Pt_ancrage, labels) :
+    """
+    Interpoler lespoints manquants de la collecte pour les utiliser dans l'initial guess
+    :param Pt_collecte: DM(3,135)
+    :param labels: list(nombre de labels)
+    :return: Pt_interpole: DM(3,135) (même dimension que Pos_repos)
+    """
+    #liste avec les bons points aux bons endroits, et le reste vaut 0
+
+    Pt_interpole = np.zeros((3,135))
+    for ind in range (135) :
+        if 't' + str(ind) in labels and np.isnan(Pt_collecte[0, labels.index('t' + str(ind))])==False :
+            Pt_interpole[:,ind] = Pt_collecte[:, labels.index('t' + str(ind))]
+
+    #séparation des colonnes
+    Pt_colonnes = []
+    for i in range (9) :
+        Pt_colonnei = np.zeros((3,17))
+        Pt_colonnei[:,0] = Pt_ancrage[2*(n+m) - 1 - i, :]
+        Pt_colonnei[:,1:16] = Pt_interpole[:, 15*i:15*(i+1)]
+        Pt_colonnei[:,-1] = Pt_ancrage[n + i, :]
+        Pt_colonnes+= [Pt_colonnei]
+
+    #interpolation des points de chaque colonne
+    Pt_inter_liste=[]
+    for colonne in range (9) :
+        for ind in range (17) :
+            if Pt_colonnes[colonne][0,ind] == 0 :
+                gauche = Pt_colonnes[colonne][:,ind-1]
+                j=1
+                while Pt_colonnes[colonne][0,ind+j] == 0 :
+                    j+=1
+                droite= Pt_colonnes[colonne][:,ind+j]
+                Pt_colonnes[colonne][:, ind] = gauche + (droite-gauche)/(j+1)
+        Pt_colonne_ind = Pt_colonnes[colonne][:, 1:16]
+        Pt_inter_liste += [Pt_colonnes[colonne][:, 1:16]]
+
+    #on recolle les colonnes interpolées
+    Pt_inter = []
+    for i in range (9) :
+        Pt_inter = cas.horzcat(Pt_inter, Pt_inter_liste[i])
+
+    # fig = plt.figure(1)
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.set_box_aspect([1.1, 1.8, 1])
+    # ax.plot(np.array((Pt_inter))[0, :], np.array((Pt_inter))[1, :], np.array((Pt_inter))[2, :], '.b')
+    # plt.show()
+
+    Pt_inter = np.array((Pt_inter))
+
+    return Pt_inter
 
 def Vit_initial(Ptavant, Ptapres, labels):
     """
@@ -1276,20 +1317,18 @@ total_frame = 7763
 intervalle_dyna = [5170, 5173]
 nb_frame = intervalle_dyna[1] - intervalle_dyna[0]
 
+dict_fixed_params = Param_fixe(Masse_centre)
+Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
+
 F_totale_collecte, Pt_collecte_tab, labels, ind_masse = Resultat_PF_collecte(participant, statique_name, vide_name, trial_name, intervalle_dyna)
 
+Pt_collecte_tab[1] = interpolation_collecte_lineaire(Pt_collecte_tab[1], Pt_ancrage, labels)
+Pt_collecte_tab[2] = interpolation_collecte_lineaire(Pt_collecte_tab[2], Pt_ancrage, labels)
 
 
 
 
-
-
-
-
-
-
-
-path = '/home/lim/Documents/Jules/dynamique/results/test_restor3.pkl'
+path = '/home/lim/Documents/Jules/dynamique/results/optimC_4.pkl'
 with open(path, 'rb') as file:
     sol = pickle.load(file)
     w0 = pickle.load(file)
@@ -1314,18 +1353,28 @@ pos1init = np.array(w0[40:445]).reshape((135,3))
 pos2init = np.array(w0[865:1270]).reshape((135,3))
 
 
-# -- positions
-# fig = plt.figure(0)
-# ax = fig.add_subplot(111, projection='3d')
-# ax.set_box_aspect([1.1, 1.8, 1])
-# ax.plot(0,0,-1.2,'xw')
-#point initiaux
-# ax.plot(pos1init[:,0] ,pos1init[:,1] ,pos1init[:,2], '+r')
-# ax.plot(pos2init[:,0],pos2init[:,1] ,pos2init[:,2], '+g')
-# point restauration
-# ax.plot(position1[:,0] ,position1[:,1] ,position1[:,2], '+y')
-# ax.plot(position2[:,0],position2[:,1] ,position2[:,2], '+g')
-# plt.show()
+# -- positions -- #
+fig = plt.figure()
+## frame 1
+ax = plt.subplot(1,2,1, projection='3d')
+ax.set_box_aspect([1.1, 1.8, 1])
+ax.plot(0,0,-1.2,'xw')
+# point simulés
+ax.plot(position1[:,0] ,position1[:,1] ,position1[:,2], '+r')
+# point collectés
+ax.plot(Pt_collecte_tab[1][0,:] ,Pt_collecte_tab[1][1,:] ,Pt_collecte_tab[1][2,:], '.b')
+
+
+## frame 2
+ax = plt.subplot(1,2,2, projection='3d')
+ax.set_box_aspect([1.1, 1.8, 1])
+ax.plot(0,0,-1.2,'xw')
+# point collectés
+ax.plot(Pt_collecte_tab[2][0,:] ,Pt_collecte_tab[2][1,:] ,Pt_collecte_tab[2][2,:], '.b')
+# point simulés
+ax.plot(position2[:,0] ,position2[:,1] ,position2[:,2], '+r')
+
+plt.show()
 
 # -- vitesses
 # plt.matshow(vitesse1, aspect='auto')
@@ -1334,9 +1383,6 @@ pos2init = np.array(w0[865:1270]).reshape((135,3))
 
 
 # afficher forces en chaque point
-# position1_ready =
-# vitesse1_ready =
-# C_ready =
 F_ready1 = solution[850:865]
 F_ready2 = solution[1675:1690]
 F_instant_t = Force_totale_par_points(position1, vitesse1, C, F_ready1, Masse_centre, ind_masse)
