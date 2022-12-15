@@ -952,10 +952,10 @@ def Integration(X, Xdot, F, C, Masse_centre, ind_masse):
 
 
 def Acceleration_cadre(Pt, total_frame):
-    masse_cadre = 260
+    masse_cadre = 270
     dt = 1 / 500
 
-    axe = 11
+    axe = 11 # point du cadre qui existe presque toujours
     time = np.linspace(0, 10, total_frame)
     time2 = np.linspace(0, 10, total_frame-2)
 
@@ -967,10 +967,11 @@ def Acceleration_cadre(Pt, total_frame):
         y.append(i[axe, 1])
         z.append(i[axe, 2])
 
-    a, b = signal.butter(4, 0.015)
+    a, b = signal.butter(1, 0.15)
     zfil = signal.filtfilt(a, b, z, method="gust")
     yfil = signal.filtfilt(a, b, y, method="gust")
     xfil = signal.filtfilt(a, b, x, method="gust")
+
 
     for pos in range(1, len(zfil) - 1):
         accz.append(((zfil[pos + 1] + zfil[pos - 1] - 2 * zfil[pos]) / (dt**2)))
@@ -989,7 +990,7 @@ def Acceleration_cadre(Pt, total_frame):
     ax[0,0].set_xlabel('Temps (s)')
     ax[0,0].set_ylabel('X (m)')
     # ax[1,0].plot(time2, accx, '-g')
-    ax[1, 0].plot(time2[:len(fx)], fx, color='lime')
+    ax[1, 0].plot(time2[:len(fx)], fx, color='lime', marker='o')
     ax[1,0].set_xlabel('Temps (s)')
     ax[1,0].set_ylabel('Force cadre X (N)')
 
@@ -998,7 +999,7 @@ def Acceleration_cadre(Pt, total_frame):
     ax[0,1].set_xlabel('Temps (s)')
     ax[0,1].set_ylabel('Y (m)')
     # ax[1,1].plot(time2, accy, '-g')
-    ax[1, 1].plot(time2[:len(fy)], fy, color='lime')
+    ax[1, 1].plot(time2[:len(fy)], fy, color='lime',marker='o')
     ax[1,1].set_xlabel('Temps (s)')
     ax[1,1].set_ylabel('Force cadre Y (N)')
 
@@ -1007,7 +1008,7 @@ def Acceleration_cadre(Pt, total_frame):
     ax[0, 2].set_xlabel('Temps (s)')
     ax[0, 2].set_ylabel('Z (m)')
     # ax[1,2].plot(time2, accz, '-g', label = 'Accélération')
-    ax[1, 2].plot(time2[:len(fz)], fz, color='lime', label='Force de l\'accélération du cadre')
+    ax[1, 2].plot(time2[:len(fz)], fz, color='lime',marker='o', label='Force de l\'accélération du cadre')
     ax[1,2].set_xlabel('Temps (s)')
     ax[1,2].set_ylabel('Force cadre Z (N)')
 
@@ -1462,7 +1463,7 @@ def Optimisation() :  # main
         Force_plateforme[0, 2] = Force_collecte[2] + masse_trampo * 9.81 - force_accel_cadre[2]
 
         for j in range(3):
-            Difference += (Force_point[0, j] - Force_plateforme[0, j])**2
+            Difference += 1000*(Force_point[0, j] - Force_plateforme[0, j])**2
 
         output = Difference
         obj = cas.Function('f', [X, Xdot, C, F], [output]).expand()
@@ -1483,6 +1484,7 @@ def Optimisation() :  # main
 
     # -- choix de l'intervalle de frame
     total_frame = 7763
+    # intervalle_dyna = [5170, 5190]
     intervalle_dyna = [5170, 5173]
     nb_frame = intervalle_dyna[1] - intervalle_dyna[0]
 
@@ -1566,7 +1568,7 @@ def Optimisation() :  # main
         Pt_collecte = Pt_collecte_tab[frame] # pt collecte instant i
 
         # -- Recuperation force acceleration cadre
-        force_accel_cadre = force_acceleration_cadre[frame-1] # force accel instant i, car par la meme taille que les autres array
+        force_accel_cadre = force_acceleration_cadre[frame-1,:] # force accel instant i, car par la meme taille que les autres array
 
         # -- on gere l'objectif a l'instant i
         J = A_minimiser(X_sym, Xdot_sym, C_sym, F_sym, Masse_centre, Pt_collecte, Force_plateforme_frame, force_accel_cadre, labels, ind_masse)
@@ -1620,7 +1622,7 @@ def Optimisation() :  # main
     sol = solver(x0=cas.vertcat(*w0), lbg=cas.vertcat(*lbg), ubg=cas.vertcat(*ubg), lbx=cas.vertcat(*lbw), ubx=cas.vertcat(*ubw))
     w_opt = sol['x'].full().flatten()
 
-    path ='/home/lim/Documents/Jules/dynamique/results/optimC_4.pkl'
+    path ='/home/lim/Documents/Jules/dynamique/results/optimC_6.pkl'
     with open(path, 'wb') as file:
         pickle.dump(sol, file)
         pickle.dump(w0, file)
