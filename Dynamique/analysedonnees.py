@@ -921,6 +921,15 @@ def Integration(X, Xdot, F, C, Masse_centre, ind_masse):
 
     return Pt_integ, vitesse_calc
 
+def obj_force(Force_collecte, force_accel_cadre):
+    masse_trampo = 270
+
+    obj_force = np.zeros((1, 3))
+    obj_force[0, 0] = Force_collecte[0] - force_accel_cadre[0]
+    obj_force[0, 1] = Force_collecte[1] - force_accel_cadre[1]
+    obj_force[0, 2] = Force_collecte[2] + masse_trampo * 9.81 - force_accel_cadre[2]
+
+    return obj_force
 
 def Acceleration_cadre(Pt, total_frame):
     masse_cadre = 260
@@ -938,7 +947,7 @@ def Acceleration_cadre(Pt, total_frame):
         y.append(i[axe, 1])
         z.append(i[axe, 2])
 
-    a, b = signal.butter(4, 0.015)
+    a, b = signal.butter(1, 0.15)
     zfil = signal.filtfilt(a, b, z, method="gust")
     yfil = signal.filtfilt(a, b, y, method="gust")
     xfil = signal.filtfilt(a, b, x, method="gust")
@@ -1322,13 +1331,21 @@ Pt_ancrage, Pos_repos = Points_ancrage_repos(dict_fixed_params)
 
 F_totale_collecte, Pt_collecte_tab, labels, ind_masse = Resultat_PF_collecte(participant, statique_name, vide_name, trial_name, intervalle_dyna)
 
+## - Donnees collectées
+Pt_ancrage_collecte, label_ancrage = Point_ancrage(Pt_collecte_tab, labels)
+
 Pt_collecte_tab[1] = interpolation_collecte_lineaire(Pt_collecte_tab[1], Pt_ancrage, labels)
 Pt_collecte_tab[2] = interpolation_collecte_lineaire(Pt_collecte_tab[2], Pt_ancrage, labels)
 
 
+force_acceleration_cadre = Acceleration_cadre(Pt_ancrage_collecte, total_frame).T
+
+F_obj1 = obj_force(F_totale_collecte[1], force_acceleration_cadre[0])
+F_obj1 = obj_force(F_totale_collecte[2], force_acceleration_cadre[0])
 
 
-path = '/home/lim/Documents/Jules/dynamique/results/optimC_4.pkl'
+
+path = '/home/lim/Documents/Jules/dynamique/results/optimC_5.pkl'
 with open(path, 'rb') as file:
     sol = pickle.load(file)
     w0 = pickle.load(file)
