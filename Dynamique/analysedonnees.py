@@ -964,32 +964,32 @@ def Acceleration_cadre(Pt, total_frame):
     fig, ax = plt.subplots(2, 3)
     fig.suptitle('Position sur Z du point d\'ancrage')
 
-    ax[0,0].plot(time[:len(Pt)], x, label='Données collectées')
-    ax[0,0].plot(time[:len(Pt)], xfil, '-r', label='Données filtrées')
-    ax[0,0].set_xlabel('Temps (s)')
-    ax[0,0].set_ylabel('X (m)')
+    ax[0, 0].plot(time[:len(Pt)], x, label='Données collectées')
+    ax[0, 0].plot(time[:len(Pt)], xfil, '-r', label='Données filtrées')
+    ax[0, 0].set_xlabel('Temps (s)')
+    ax[0, 0].set_ylabel('X (m)')
     # ax[1,0].plot(time2, accx, '-g')
-    ax[1, 0].plot(time2[:len(fx)], fx, color='lime')
-    ax[1,0].set_xlabel('Temps (s)')
-    ax[1,0].set_ylabel('Force cadre X (N)')
+    ax[1, 0].plot(time2[:len(fx)], fx, color='lime', marker='o')
+    ax[1, 0].set_xlabel('Temps (s)')
+    ax[1, 0].set_ylabel('Force cadre X (N)')
 
-    ax[0,1].plot(time[:len(Pt)], y)
-    ax[0,1].plot(time[:len(Pt)], yfil, '-r')
-    ax[0,1].set_xlabel('Temps (s)')
-    ax[0,1].set_ylabel('Y (m)')
+    ax[0, 1].plot(time[:len(Pt)], y)
+    ax[0, 1].plot(time[:len(Pt)], yfil, '-r')
+    ax[0, 1].set_xlabel('Temps (s)')
+    ax[0, 1].set_ylabel('Y (m)')
     # ax[1,1].plot(time2, accy, '-g')
-    ax[1, 1].plot(time2[:len(fy)], fy, color='lime')
-    ax[1,1].set_xlabel('Temps (s)')
-    ax[1,1].set_ylabel('Force cadre Y (N)')
+    ax[1, 1].plot(time2[:len(fy)], fy, color='lime', marker='o')
+    ax[1, 1].set_xlabel('Temps (s)')
+    ax[1, 1].set_ylabel('Force cadre Y (N)')
 
     ax[0, 2].plot(time[:len(Pt)], z)
     ax[0, 2].plot(time[:len(Pt)], zfil, '-r')
     ax[0, 2].set_xlabel('Temps (s)')
     ax[0, 2].set_ylabel('Z (m)')
     # ax[1,2].plot(time2, accz, '-g', label = 'Accélération')
-    ax[1, 2].plot(time2[:len(fz)], fz, color='lime', label='Force de l\'accélération du cadre')
-    ax[1,2].set_xlabel('Temps (s)')
-    ax[1,2].set_ylabel('Force cadre Z (N)')
+    ax[1, 2].plot(time2[:len(fz)], fz, color='lime', marker='o', label='Force de l\'accélération du cadre')
+    ax[1, 2].set_xlabel('Temps (s)')
+    ax[1, 2].set_ylabel('Force cadre Z (N)')
 
     fig.legend(shadow=True)
     # plt.show()
@@ -1345,7 +1345,7 @@ F_obj1 = obj_force(F_totale_collecte[2], force_acceleration_cadre[0])
 
 
 
-path = '/home/lim/Documents/Jules/dynamique/results/optimC_5.pkl'
+path = '/home/lim/Documents/Jules/Jules_toile_A2022/Dynamique/Result/Optim_C.plk'
 with open(path, 'rb') as file:
     sol = pickle.load(file)
     w0 = pickle.load(file)
@@ -1356,6 +1356,10 @@ solution = np.array((sol['x']))
 objectif = sol['f']
 
 C = solution[:40]
+c_tot = Param_variable(C).reshape((9,15))
+plt.matshow(c_tot)
+plt.title('Reparition des C')
+plt.show()
 C_init = w0[:40]
 
 position1 = solution[40:445].reshape((135,3))

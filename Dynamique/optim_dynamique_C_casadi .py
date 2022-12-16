@@ -1425,9 +1425,9 @@ def Optimisation() :  # main
         lbw_F[::3] = [-1e3] * 5
         lbw_F[1::3] = [-1e3] * 5
 
-        w0_F = [1200]*15
-        w0_F[::3] = [500]*5
-        w0_F[1::3] = [500]*5
+        w0_F = [200]*15
+        w0_F[::3] = [20]*5
+        w0_F[1::3] = [20]*5
 
         return lbw_F, ubw_F, w0_F
 
@@ -1614,7 +1614,7 @@ def Optimisation() :  # main
     # -- Creation du solver
     prob = {'f': objectif, 'x': cas.vertcat(*w), 'g': cas.vertcat(*g)}
     # opts={"ipopt" : {"linear_solver" : "ma57", "tol" : 1e-4, "constr_viol_tol" : 1e-4, "constr_inf_tol" : 1e-4, "hessian_approximation" : "limited-memory"}}
-    opts = {"ipopt": {"max_iter" :100000, "linear_solver": "ma57"}} #, "tol": 1e-4, "hessian_approximation" : "limited-memory"}}
+    opts = {"ipopt": {"max_iter" :10000, "linear_solver": "ma57"}} #, "tol": 1e-4, "hessian_approximation" : "limited-memory"}}
     solver = cas.nlpsol('solver', 'ipopt', prob, opts)
 
     # -- Resolution
@@ -1622,7 +1622,7 @@ def Optimisation() :  # main
     sol = solver(x0=cas.vertcat(*w0), lbg=cas.vertcat(*lbg), ubg=cas.vertcat(*ubg), lbx=cas.vertcat(*lbw), ubx=cas.vertcat(*ubw))
     w_opt = sol['x'].full().flatten()
 
-    path ='/home/lim/Documents/Jules/dynamique/results/optimC_6.pkl'
+    path ='/home/lim/Documents/Jules/Jules_toile_A2022/Dynamique/Result/Optim_C.plk'
     with open(path, 'wb') as file:
         pickle.dump(sol, file)
         pickle.dump(w0, file)
